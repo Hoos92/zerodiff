@@ -65,3 +65,47 @@ Honest scope note: 100% here means 100% *of recorded behaviors*. For
 example, `fromRoman("N")` was never recorded (the driver round-trips
 1..4999), so nothing is claimed about it. Coverage is bounded by the driver
 — that is a property of the method, stated plainly in every report.
+
+---
+
+# Second cohort: rising complexity
+
+A second, independent cohort of GitHub libraries, chosen as a complexity
+ladder — from one quirky parser function to a linguistic rule engine:
+
+| library | GitHub | complexity | behaviors | first pass | passes to green |
+|---|---|---|---|---|---|
+| `word2number` | akshaynagpal/w2n | simple: one parser, many quirks | 51 | **7 diverged** | 2 |
+| `python-slugify` | un33p/python-slugify | medium: ~10 interacting options | 202 | **17 diverged** | 3 |
+| `num2words` | savoirfairelinux/num2words | high: linguistic rule tables | 187 | **5 diverged** | 2 |
+
+Again **three out of three clean-room rewrites were wrong on the first
+pass** (29 divergences, none catchable by linters or type checkers), and
+again every one reached 100% of recorded behaviors.
+
+## The best finds of the whole program so far
+
+- **`word2number` has a real arithmetic bug, and the recording proved it**:
+  `word_to_num("one billion two million")` returns **1,003,000,002** — the
+  original re-adds the words after "billion" as a "hundreds" part, so two
+  million is counted one-and-a-half times. It also *silently ignores
+  unknown words* (`word_to_num("one two hello")` → `3`) and returns `0`
+  for the bare word `"point"`. A drop-in replacement must reproduce all of
+  it — "fixing" the math would break any caller that compensated for it.
+- **`python-slugify` treats two kinds of apostrophes differently.**
+  Apostrophes *in the input* become separators (`"C'est"` → `"c-est"`),
+  but apostrophes *introduced by transliteration* are deleted (Cyrillic
+  soft sign: `"Компьютер"` → `"Komp'iuter"` → `"kompiuter"`). Two quote
+  passes, one before and one after transliteration — invisible in the
+  docs, decisive in the output, recovered entirely from recorded behavior.
+- **`num2words` has an undocumented year grammar**: centuries divisible by
+  ten read as cardinals ("two thousand and one"), others pair up
+  ("nineteen oh-one", "ten sixty-six", "twenty ten"). Its type error even
+  formats the *value* into the message (`type(None) not in [long, int,
+  float]`) — reproduce the message, wart and all.
+
+## Program totals (both cohorts + dateutil case study)
+
+**7 real libraries, 12,251 recorded behaviors, 7/7 clean-room rewrites
+wrong on first pass, 119 divergences found, every library brought to 100%
+of recorded behaviors within three passes.**

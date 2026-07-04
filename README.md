@@ -145,9 +145,15 @@ the trace files, not merely the report.
   modern rewrite, with zero source edits. Retrace caught the one divergence
   a human review would wave through. Write-up with numbers:
   [docs/CASE_STUDY.md](docs/CASE_STUDY.md).
-- `examples/validation_*` — three more real GitHub libraries (`roman`,
-  `inflection`, `humanize`) run through the same loop as independent
-  validations. Results: [docs/VALIDATION.md](docs/VALIDATION.md).
+- `examples/validation_*` — six more real GitHub libraries (`roman`,
+  `inflection`, `humanize`, `word2number`, `python-slugify`, `num2words`)
+  run through the same loop as independent validations, across a
+  complexity ladder. Program total: **7 libraries, 12,251 recorded
+  behaviors, 7/7 clean-room rewrites wrong on first pass, all brought to
+  100%**. Results: [docs/VALIDATION.md](docs/VALIDATION.md).
+
+Questions like "do I need an LLM for this?" (no) are answered in the
+[FAQ](docs/FAQ.md).
 
 ## Licensing
 

@@ -228,7 +228,14 @@ def _cmd_record(args: argparse.Namespace) -> int:
     if proc.returncode != 0:
         print("retrace: note: recorded command exited with code {}".format(
             proc.returncode), file=sys.stderr)
-    return EXIT_MATCHED if after > before else EXIT_ERROR
+    if after <= before:
+        print("retrace: error: no calls were recorded. Check that the "
+              "command actually exercises the code, and that --include "
+              "patterns are module names (e.g. 'billing.pricing'), or "
+              "that boundaries are marked with @retrace.record / "
+              "retrace.wrap().", file=sys.stderr)
+        return EXIT_ERROR
+    return EXIT_MATCHED
 
 
 def _count_traces(trace_dir: str) -> int:
