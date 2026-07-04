@@ -1,0 +1,4 @@
+# humanize's public API lives in submodules; flatten both into one rewrite
+[map]
+"humanize.filesize" = "humanize_modern"
+"humanize.number" = "humanize_modern"

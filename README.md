@@ -113,6 +113,9 @@ the trace files, not merely the report.
   modern rewrite, with zero source edits. Retrace caught the one divergence
   a human review would wave through. Write-up with numbers:
   [docs/CASE_STUDY.md](docs/CASE_STUDY.md).
+- `examples/validation_*` — three more real GitHub libraries (`roman`,
+  `inflection`, `humanize`) run through the same loop as independent
+  validations. Results: [docs/VALIDATION.md](docs/VALIDATION.md).
 
 ## Status
 
