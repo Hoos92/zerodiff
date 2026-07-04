@@ -1,0 +1,4 @@
+[map]
+"stdnum.luhn" = "luhn_v2"
+"stdnum.isbn" = "isbn_v2"
+"stdnum.iban" = "iban_v2"

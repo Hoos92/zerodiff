@@ -45,10 +45,25 @@ def _load_key(key_file: str) -> bytes:
     return key
 
 
-def build_attestation(trace_dir: str, report_path: str,
-                      key_file: str) -> Dict[str, Any]:
+def _git_commit() -> Optional[str]:
+    import subprocess
+
+    try:
+        proc = subprocess.run(["git", "rev-parse", "HEAD"],
+                              capture_output=True, text=True, timeout=10)
+        if proc.returncode == 0:
+            return proc.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+
+def build_attestation(trace_dir: str, report_path: str, key_file: str,
+                      code_paths: Optional[List[str]] = None
+                      ) -> Dict[str, Any]:
     """A tamper-evident evidence bundle: digests of every input that
-    produced the verification verdict, HMAC-signed with the team key."""
+    produced the verification verdict, HMAC-signed with the team key.
+    ``code_paths`` optionally pins the rewrite source files that passed."""
     _license_notice()
     key = _load_key(key_file)
     with open(report_path, "r", encoding="utf-8") as f:
@@ -76,6 +91,12 @@ def build_attestation(trace_dir: str, report_path: str,
                  "only.".format(matched=report["summary"]["matched"],
                                 replayed=report["summary"]["replayed"]),
     }
+    if code_paths:
+        body["code"] = {path: _sha256_file(path)
+                        for path in sorted(code_paths)}
+    commit = _git_commit()
+    if commit:
+        body["git_commit"] = commit
     signature = hmac.new(key, canonical_json(body).encode("utf-8"),
                          hashlib.sha256).hexdigest()
     return {"body": body, "signature": signature, "algorithm": "hmac-sha256"}
@@ -106,6 +127,12 @@ def verify_attestation(attestation_path: str, key_file: str,
             elif _sha256_file(path) != recorded_digest:
                 problems.append("trace file changed since attestation: %s"
                                 % name)
+    for path, recorded_digest in body.get("code", {}).items():
+        if not os.path.exists(path):
+            problems.append("attested code file missing: %s" % path)
+        elif _sha256_file(path) != recorded_digest:
+            problems.append("code file changed since attestation: %s"
+                            % path)
     return problems
 
 
@@ -125,6 +152,7 @@ def append_history(report: Dict[str, Any], directory: str = ".") -> str:
         "diverged": s["diverged"],
         "skipped": s["skipped_unreplayable"],
         "boundaries": len(s["boundaries"]),
+        "git_commit": _git_commit(),
     }
     with open(path, "a", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(entry, ensure_ascii=True) + "\n")

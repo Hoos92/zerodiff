@@ -104,8 +104,43 @@ again every one reached 100% of recorded behaviors.
   formats the *value* into the message (`type(None) not in [long, int,
   float]`) — reproduce the message, wart and all.
 
-## Program totals (both cohorts + dateutil case study)
+---
 
-**7 real libraries, 12,251 recorded behaviors, 7/7 clean-room rewrites
-wrong on first pass, 119 divergences found, every library brought to 100%
+# Third cohort: `python-stdnum` — the full pipeline, end to end
+
+The hardest validation, run entirely through **`retrace migrate`**:
+record → scaffold → agent loop → signed attestation, on a compliance
+library with three modules, a custom exception hierarchy, and per-country
+IBAN plug-ins.
+
+| library | GitHub | behaviors | boundaries | first pass | passes to green |
+|---|---|---|---|---|---|
+| `python-stdnum` (luhn+isbn+iban) | arthurdejong/python-stdnum | 269 | 14 | **38 diverged** | 3 |
+
+The run finished with `retrace attest` pinning 14 trace files **and the
+three rewrite source files**, `verify-attestation` passing, and tamper
+detection catching a one-character edit to an attested file (exit 1).
+
+Finds worth the price of admission:
+
+- **Nested-call recording captured stdnum's real internal API.** The
+  driver never passed `check_country=`, but stdnum's own `is_valid` calls
+  `validate(number, check_country=...)` internally — the wrapped boundary
+  recorded it, and the rewrite was forced to honor the true signature.
+- **The textbook IBAN `BE68539007547034` is invalid according to stdnum**
+  — the Belgian country plug-in's bank-registry lookup rejects the string
+  half the internet uses as the canonical valid example.
+- **Exception *ordering* is a contract**: stdnum verifies the mod-97
+  checksum before length or country, so a truncated GB IBAN raises
+  `InvalidChecksum`, not `InvalidLength`, and an unknown-country IBAN
+  raises `InvalidChecksum`, not `InvalidComponent`.
+- `to_isbn13`/`to_isbn10` **preserve the input's hyphenation** (string
+  surgery, not numeric conversion), `validate("")` raises `InvalidFormat`
+  (format precedes length), and the 979 error carries the custom message
+  "Does not use 978 Bookland prefix."
+
+## Program totals (all cohorts + dateutil case study)
+
+**8 real libraries, 12,520 recorded behaviors, 8/8 clean-room rewrites
+wrong on first pass, 157 divergences found, every library brought to 100%
 of recorded behaviors within three passes.**

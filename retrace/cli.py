@@ -147,6 +147,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_attest.add_argument("--key-file", required=True,
                           help="file containing the team signing key "
                                "(>=16 bytes)")
+    p_attest.add_argument("--code", action="append", default=[],
+                          metavar="FILE",
+                          help="also pin a rewrite source file's digest "
+                               "into the attestation (repeatable)")
     p_attest.add_argument("-o", "--out", default=None)
 
     p_vattest = sub.add_parser(
@@ -306,6 +310,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 
     result = replay_all(args.traces, mappings, cfg,
                         isolate=args.isolate, timeout=args.timeout)
+    _warn_if_unmapped(result, mappings)
     report = report_mod.build_report(result.to_dict(), args.traces, mappings)
     report_mod.write_reports(report, args.json_out, args.md_out)
     if args.junit_out:
@@ -328,6 +333,22 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     return EXIT_MATCHED
 
 
+def _warn_if_unmapped(result, mappings: Dict[str, str]) -> None:
+    """A passing replay with no effective mapping means the boundaries were
+    replayed against the ORIGINAL modules -- trivially matching. That false
+    confidence is worse than an error, so call it out loudly."""
+    from .replayer import map_target
+
+    boundaries = list(result.boundaries)
+    if not boundaries:
+        return
+    if all(map_target(b, mappings) == b for b in boundaries):
+        print("retrace: WARNING: no [map] entry applied to any recorded "
+              "boundary -- you just replayed the original code against "
+              "itself. Add --map OLD:NEW (or [map] in retrace.toml) to "
+              "verify a rewrite.", file=sys.stderr)
+
+
 def _print_divergence_digest(report: Dict, limit: int = 5) -> None:
     for d in report["divergences"][:limit]:
         print("  - [{}] {} at {}".format(d["kind"], d["boundary"], d["path"]))
@@ -339,7 +360,8 @@ def _print_divergence_digest(report: Dict, limit: int = 5) -> None:
 def _cmd_attest(args: argparse.Namespace) -> int:
     from .enterprise import ATTESTATION_FILE, build_attestation
 
-    attestation = build_attestation(args.traces, args.report, args.key_file)
+    attestation = build_attestation(args.traces, args.report, args.key_file,
+                                    code_paths=args.code or None)
     out = args.out or ATTESTATION_FILE
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(attestation, f, indent=2)

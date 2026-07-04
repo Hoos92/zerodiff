@@ -1,0 +1,46 @@
+# Changelog
+
+## 0.6.0 — 2026-07-04
+
+- `retrace replay` warns loudly when no `[map]` entry applied to any
+  boundary (you were replaying the original against itself)
+- attestations can pin rewrite source files (`retrace attest --code FILE`)
+  and record the git commit; `verify-attestation` checks code digests too
+- `retrace history` entries record the git commit
+- new complex validation: python-stdnum (luhn/isbn/iban) through the full
+  `retrace migrate` pipeline end to end
+- repo governance: CHANGELOG, SECURITY.md, CONTRIBUTING.md, CI workflow
+
+## 0.5.0 — 2026-07-04
+
+- `retrace migrate`: the whole verified migration in one command — record
+  → scaffold rewrite stubs from recorded boundaries → drive any agent CLI
+  through the replay-fix loop → optional signed attestation
+
+## 0.4.0 — 2026-07-04
+
+- free tier: `retrace init`, `retrace demo`, `retrace.testing.verify_traces()`
+  pytest one-liner, `retrace replay --junit-out`
+- Enterprise (COMMERCIAL.md): `retrace attest` / `verify-attestation`
+  (HMAC-signed tamper-evident evidence), `retrace history`
+
+## 0.3.0 — 2026-07-03
+
+- `retrace loop`: unattended replay→agent→replay loop for any agent CLI
+- `retrace mcp`: zero-dependency MCP server (Claude Code, Codex, Copilot,
+  Cursor)
+- GitHub Action and Claude Code hook integrations
+
+## 0.2.0 — 2026-07-03
+
+- `--include` zero-edit auto-instrumentation via import hook
+- `--isolate` subprocess replay: crashes/hangs become `process_crash`
+  divergences with per-call `--timeout`
+- record-time redaction (`redact_fields`)
+- real-world case study: dateutil.easter (docs/CASE_STUDY.md)
+
+## 0.1.0 — 2026-07-03
+
+- initial release: record / replay / report, canonical serializer with
+  flagged weak comparisons, divergence taxonomy with agent-actionable
+  hints, scrubbers, JSONL traces, CI-ready exit codes
