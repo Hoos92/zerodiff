@@ -1,0 +1,79 @@
+"""Noise normalization applied to encoded trees before diffing.
+
+Scrubbers run on *both* the recorded and the replayed tree, so legitimate
+noise (timestamps, UUIDs, request ids) doesn't drown real divergences.
+A scrubbed node is replaced by the sentinel string below — visible in
+reports, so a reader can always tell that a field was excluded rather than
+matched.
+"""
+
+import re
+from typing import Any, Dict, List
+
+SCRUBBED = "__scrubbed__"
+
+BUILTIN_PATTERNS = {
+    "uuid": re.compile(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}"
+        r"-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    ),
+    "timestamp": re.compile(
+        r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?"
+    ),
+}
+
+
+def _field_matches(key: str, path: str, patterns: List[str]) -> bool:
+    for pat in patterns:
+        if pat == key or pat == path:
+            return True
+        # "*.name" matches a key at any depth
+        if pat.startswith("*.") and pat[2:] == key:
+            return True
+    return False
+
+
+def scrub(tree: Any, ignore_fields: List[str],
+          regexes: List[Any], path: str = "output") -> Any:
+    """Return a copy of the encoded tree with configured noise normalized."""
+    if isinstance(tree, str):
+        out = tree
+        for rx in regexes:
+            out = rx.sub(SCRUBBED, out)
+        return out
+    if isinstance(tree, list):
+        return [scrub(v, ignore_fields, regexes, "%s[%d]" % (path, i))
+                for i, v in enumerate(tree)]
+    if isinstance(tree, dict):
+        # marker nodes pass through with their contents scrubbed
+        result = {}
+        for key, value in tree.items():
+            child_path = "%s.%s" % (path, key)
+            if not key.startswith("__") and \
+                    _field_matches(key, child_path, ignore_fields):
+                result[key] = SCRUBBED
+            else:
+                result[key] = scrub(value, ignore_fields, regexes, child_path)
+        return result
+    return tree
+
+
+def compile_scrubbers(cfg, boundary: str) -> Dict[str, Any]:
+    """Resolve config into the concrete scrub plan for one boundary."""
+    regexes = []
+    for name in cfg.builtin_scrubbers(boundary):
+        rx = BUILTIN_PATTERNS.get(name)
+        if rx is None:
+            raise ValueError(
+                "unknown builtin scrubber %r (available: %s)"
+                % (name, ", ".join(sorted(BUILTIN_PATTERNS)))
+            )
+        regexes.append(rx)
+    for entry in cfg.regex_scrubs(boundary):
+        pattern = entry.get("pattern") if isinstance(entry, dict) else entry
+        regexes.append(re.compile(pattern))
+    return {
+        "ignore_fields": cfg.ignore_fields(boundary),
+        "regexes": regexes,
+        "float_tolerance": cfg.float_tolerance(boundary),
+    }

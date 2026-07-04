@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retrace-harness"
+version = "0.1.0"
+description = "Behavioral equivalence harness: record what your legacy code really does, replay it against an AI rewrite, and get every divergence as an actionable report."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+authors = [{ name = "Retrace contributors" }]
+keywords = ["testing", "migration", "ai-agents", "characterization-testing", "verification"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+retrace = "retrace.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/retrace-harness/retrace"
+
+[tool.setuptools]
+packages = ["retrace"]

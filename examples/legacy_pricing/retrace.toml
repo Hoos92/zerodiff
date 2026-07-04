@@ -1,0 +1,9 @@
+# Replay the recorded 'pricing' boundaries against the modern rewrite.
+# Override on the command line to target the buggy rewrite instead:
+#   retrace replay -t traces --map pricing:pricing_buggy
+
+[map]
+"pricing" = "pricing_v2"
+
+[scrub]
+float_tolerance = 0.0   # demo is fully deterministic; keep comparisons exact
