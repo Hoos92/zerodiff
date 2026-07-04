@@ -22,6 +22,9 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 | `worker.py`     | isolated replay worker (`--isolate`): JSON-lines protocol on a duplicated fd while user prints divert to stderr; crashes/hangs become reported behavior |
 | `loop.py`       | agent feedback loop (`retrace loop`): replay → fix prompt with all divergences → invoke any agent CLI → repeat; always isolates so agent edits are re-imported fresh |
 | `mcp_server.py` | zero-dep MCP server (`retrace mcp`): JSON-RPC 2.0 over stdio exposing retrace_replay/retrace_report to MCP-capable agents; isolates by default because the server is long-lived |
+| `testing.py`    | `verify_traces()` one-liner for pytest/unittest: raises BehaviorMismatch (an AssertionError) with a divergence digest |
+| `scaffold.py`   | `retrace init` (project scaffolding) and `retrace demo` (guided 30-second example) |
+| `enterprise.py` | commercial tier (see COMMERCIAL.md): HMAC-signed tamper-evident attestations, replay history |
 | `serializer.py` | canonical, deterministic encoding of Python values to JSON-safe trees; adapter registry; opaque fallback with digest |
 | `store.py`      | JSONL trace files (one per boundary), schema versioning, iteration |
 | `config.py`     | `retrace.toml` loading (mappings, scrubbers); minimal built-in TOML-subset reader so Python 3.8 works with zero dependencies |

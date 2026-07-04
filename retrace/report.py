@@ -127,6 +127,45 @@ def render_markdown(report: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_junit(report: Dict[str, Any]) -> str:
+    """JUnit XML: one testcase per boundary, so any CI renders the gate."""
+    from xml.sax.saxutils import escape, quoteattr
+
+    s = report["summary"]
+    by_boundary = {}
+    for d in report["divergences"]:
+        by_boundary.setdefault(d["boundary"], []).append(d)
+
+    cases = []
+    for target in sorted(s["boundaries"]):
+        b = s["boundaries"][target]
+        divs = by_boundary.get(target, [])
+        body = ""
+        if divs:
+            lines = []
+            for d in divs[:20]:
+                lines.append("[%s] at %s (input %s): expected %s, got %s"
+                             % (d["kind"], d["path"],
+                                str(d.get("input", ""))[:80],
+                                str(d["expected"])[:80],
+                                str(d["actual"])[:80]))
+            if len(divs) > 20:
+                lines.append("... and %d more" % (len(divs) - 20))
+            body = ("<failure message=%s>%s</failure>"
+                    % (quoteattr("%d recorded behaviors diverged"
+                                 % b["diverged"]),
+                       escape("\n".join(lines))))
+        cases.append('<testcase classname="retrace" name=%s>%s</testcase>'
+                     % (quoteattr(target), body))
+
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<testsuite name="retrace" tests="%d" failures="%d">'
+            "%s</testsuite>\n"
+            % (len(s["boundaries"]),
+               sum(1 for t in by_boundary if by_boundary[t]),
+               "".join(cases)))
+
+
 def _md_code_safe(value: Any) -> str:
     text = value if isinstance(value, str) else json.dumps(
         value, ensure_ascii=True, sort_keys=True, default=str)

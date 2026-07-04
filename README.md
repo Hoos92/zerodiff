@@ -29,7 +29,22 @@ $ retrace replay -t traces --map "billing:billing_v2"
 
 ```bash
 pip install -e .
+retrace demo    # 30-second guided example: record a legacy function,
+                # catch the silent change a rewrite introduced
+retrace init    # scaffold retrace.toml + .gitignore for your project
 ```
+
+Gate it in your existing test suite with one line:
+
+```python
+from retrace.testing import verify_traces
+
+def test_rewrite_matches_recorded_behavior():
+    verify_traces()   # raises AssertionError with a divergence digest
+```
+
+CI systems that speak JUnit get first-class output too:
+`retrace replay -t traces --junit-out retrace-junit.xml`.
 
 Record with **zero source edits** — `--include` auto-instruments every
 public function of matching modules as they load:
@@ -134,13 +149,22 @@ the trace files, not merely the report.
   `inflection`, `humanize`) run through the same loop as independent
   validations. Results: [docs/VALIDATION.md](docs/VALIDATION.md).
 
+## Licensing
+
+The core harness is MIT and always will be. Organization-grade assurance —
+signed tamper-evident attestations (`retrace attest`), verification history
+(`retrace history`) — is source-available under a commercial license: see
+[COMMERCIAL.md](COMMERCIAL.md).
+
 ## Status
 
-v0.3 — Python 3.8+, function-level boundaries, zero runtime dependencies.
+v0.4 — Python 3.8+, function-level boundaries, zero runtime dependencies.
 0.2 added zero-edit auto-instrumentation (`--include`), subprocess-isolated
 replay with crash/hang detection (`--isolate`), and record-time redaction.
 0.3 added the agent loop (`retrace loop`), the MCP server (`retrace mcp`),
-and the GitHub Action / Claude Code hook integrations.
+and the GitHub Action / Claude Code hook integrations. 0.4 added
+`retrace init`/`demo`, the `retrace.testing` pytest helper, JUnit output,
+and the Enterprise attestation/history layer.
 Roadmap: HTTP service-level recording, side-effect interception,
 dependency-upgrade guard.
 

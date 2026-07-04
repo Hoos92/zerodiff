@@ -72,6 +72,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                                "(default: 30)")
     p_replay.add_argument("--json-out", default=report_mod.REPORT_JSON)
     p_replay.add_argument("--md-out", default=report_mod.REPORT_MD)
+    p_replay.add_argument("--junit-out", default=None,
+                          help="also write a JUnit XML report (one testcase "
+                               "per boundary) for CI systems")
+    p_replay.add_argument("--history", action="store_true",
+                          help="append this run to .retrace/history.jsonl "
+                               "(Enterprise)")
 
     p_report = sub.add_parser(
         "report", help="render an existing retrace-report.json")
@@ -101,6 +107,34 @@ def main(argv: Optional[List[str]] = None) -> int:
         "mcp", help="run the MCP server on stdio (register with: "
                     "claude mcp add retrace -- retrace mcp)")
 
+    sub.add_parser("init", help="scaffold retrace.toml and .gitignore "
+                                "entries in the current project")
+    sub.add_parser("demo", help="30-second guided demo: record a legacy "
+                                "function, catch a rewrite's silent change")
+
+    p_attest = sub.add_parser(
+        "attest", help="(Enterprise) write a signed, tamper-evident "
+                       "attestation of the last verification")
+    p_attest.add_argument("-t", "--traces", default="traces")
+    p_attest.add_argument("-r", "--report", default=report_mod.REPORT_JSON)
+    p_attest.add_argument("--key-file", required=True,
+                          help="file containing the team signing key "
+                               "(>=16 bytes)")
+    p_attest.add_argument("-o", "--out", default=None)
+
+    p_vattest = sub.add_parser(
+        "verify-attestation", help="(Enterprise) verify an attestation's "
+                                   "signature and trace digests")
+    p_vattest.add_argument("-i", "--input", default=None)
+    p_vattest.add_argument("--key-file", required=True)
+    p_vattest.add_argument("-t", "--traces", default=None,
+                           help="also check trace files still match the "
+                                "attested digests")
+
+    p_history = sub.add_parser(
+        "history", help="(Enterprise) show verification results over time")
+    p_history.add_argument("-n", "--limit", type=int, default=20)
+
     args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
@@ -116,6 +150,19 @@ def main(argv: Optional[List[str]] = None) -> int:
             from .mcp_server import main as mcp_main
             mcp_main()
             return EXIT_MATCHED
+        if args.command == "init":
+            from .scaffold import cmd_init
+            return cmd_init()
+        if args.command == "demo":
+            from .scaffold import cmd_demo
+            return cmd_demo()
+        if args.command == "attest":
+            return _cmd_attest(args)
+        if args.command == "verify-attestation":
+            return _cmd_verify_attestation(args)
+        if args.command == "history":
+            from .enterprise import show_history
+            return show_history(limit=args.limit)
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
         print("retrace: error: {}".format(exc), file=sys.stderr)
@@ -224,6 +271,12 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                         isolate=args.isolate, timeout=args.timeout)
     report = report_mod.build_report(result.to_dict(), args.traces, mappings)
     report_mod.write_reports(report, args.json_out, args.md_out)
+    if args.junit_out:
+        with open(args.junit_out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(report_mod.render_junit(report))
+    if args.history:
+        from .enterprise import append_history
+        append_history(report)
 
     s = report["summary"]
     print("retrace: replayed {} of {} recorded behaviors".format(
@@ -244,6 +297,35 @@ def _print_divergence_digest(report: Dict, limit: int = 5) -> None:
     remaining = len(report["divergences"]) - limit
     if remaining > 0:
         print("  ... and {} more (see report)".format(remaining))
+
+
+def _cmd_attest(args: argparse.Namespace) -> int:
+    from .enterprise import ATTESTATION_FILE, build_attestation
+
+    attestation = build_attestation(args.traces, args.report, args.key_file)
+    out = args.out or ATTESTATION_FILE
+    with open(out, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(attestation, f, indent=2)
+        f.write("\n")
+    body = attestation["body"]
+    print("retrace: attestation written -> %s" % out)
+    print("retrace: verdict %r over %d trace files, key id %s"
+          % (body["verdict"], len(body["traces"]), body["key_id"]))
+    return EXIT_MATCHED
+
+
+def _cmd_verify_attestation(args: argparse.Namespace) -> int:
+    from .enterprise import ATTESTATION_FILE, verify_attestation
+
+    problems = verify_attestation(args.input or ATTESTATION_FILE,
+                                  args.key_file, trace_dir=args.traces)
+    if not problems:
+        print("retrace: attestation verified -- signature and digests "
+              "check out")
+        return EXIT_MATCHED
+    for problem in problems:
+        print("retrace: ATTESTATION PROBLEM: %s" % problem)
+    return EXIT_DIVERGED
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
