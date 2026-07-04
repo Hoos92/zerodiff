@@ -147,7 +147,9 @@ def cmd_migrate(args) -> int:
           "behavior matches...")
     remaining = run_loop(args.traces, mappings, cfg, args.agent,
                          max_iters=args.max_iters, timeout=args.timeout,
-                         workdir=workdir)
+                         workdir=workdir,
+                         quality_gate=not getattr(args, "no_quality",
+                                                  False))
     if remaining > 0:
         print("retrace migrate: FAILED -- %d divergences remain after %d "
               "iterations (see retrace-report.md)"

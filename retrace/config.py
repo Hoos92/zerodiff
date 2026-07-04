@@ -49,6 +49,18 @@ class Config:
         entries.extend(self._boundary_scrub(boundary).get("regex", []))
         return entries
 
+    # -- quality gate ------------------------------------------------------
+    def quality_budgets(self) -> Dict[str, int]:
+        quality = self.data.get("quality", {})
+        return {k: v for k, v in quality.items()
+                if k in ("max_function_lines", "max_complexity",
+                         "max_nesting")}
+
+    def quality_disabled(self) -> List[str]:
+        quality = self.data.get("quality", {})
+        disabled = quality.get("disable", [])
+        return list(disabled) if isinstance(disabled, list) else []
+
     def _scrub(self) -> Dict[str, Any]:
         scrub = self.data.get("scrub", {})
         return scrub if isinstance(scrub, dict) else {}

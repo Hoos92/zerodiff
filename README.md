@@ -100,6 +100,13 @@ There's also a [GitHub Action](integrations/github-action/) that gates PRs
 on recorded behavior, and a [Claude Code hook](integrations/claude-code/)
 that blocks any edit which breaks it.
 
+Agent-written code is additionally held to a built-in
+**security/quality gate** ([docs/SAFE_CODING.md](docs/SAFE_CODING.md)):
+the loop will not finish while the rewrite contains eval/exec,
+`shell=True`, interpolated SQL, hardcoded secrets, disabled TLS
+verification, or unsafe deserialization — behavioral fidelity alone is
+not enough. Standalone: `retrace quality myfile.py`.
+
 Exit codes: `0` = every recorded behavior matched, `1` = divergences found,
 `2` = harness error. `retrace-report.json` is designed to be fed straight back
 to a coding agent; `retrace-report.md` is for humans.

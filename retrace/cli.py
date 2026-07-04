@@ -102,6 +102,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                         help="per-call replay timeout (loop always replays "
                              "in isolated workers so agent edits are "
                              "re-imported fresh)")
+    p_loop.add_argument("--no-quality", action="store_true",
+                        help="disable the security/quality gate on the "
+                             "rewrite files (on by default)")
+
+    p_quality = sub.add_parser(
+        "quality", help="run the security/quality gate on source files "
+                        "(eval/exec, shell=True, SQL interpolation, "
+                        "hardcoded secrets, complexity budgets...)")
+    p_quality.add_argument("files", nargs="+")
+    p_quality.add_argument("--config", default=None)
 
     sub.add_parser(
         "mcp", help="run the MCP server on stdio (register with: "
@@ -133,6 +143,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                            help="finish with a signed attestation "
                                 "(Enterprise; requires --key-file)")
     p_migrate.add_argument("--key-file", default=None)
+    p_migrate.add_argument("--no-quality", action="store_true",
+                           help="disable the security/quality gate on the "
+                                "rewrite files (on by default)")
 
     sub.add_parser("init", help="scaffold retrace.toml and .gitignore "
                                 "entries in the current project")
@@ -197,6 +210,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.command == "history":
             from .enterprise import show_history
             return show_history(limit=args.limit)
+        if args.command == "quality":
+            return _cmd_quality(args)
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
         print("retrace: error: {}".format(exc), file=sys.stderr)
@@ -214,7 +229,8 @@ def _cmd_loop(args: argparse.Namespace) -> int:
     mappings.update(_parse_map_args(args.map))
     remaining = run_loop(args.traces, mappings, cfg, args.agent,
                          max_iters=args.max_iters,
-                         timeout=args.timeout, workdir=cwd)
+                         timeout=args.timeout, workdir=cwd,
+                         quality_gate=not args.no_quality)
     if remaining == 0:
         print("retrace loop: all recorded behaviors match")
         return EXIT_MATCHED
@@ -355,6 +371,24 @@ def _print_divergence_digest(report: Dict, limit: int = 5) -> None:
     remaining = len(report["divergences"]) - limit
     if remaining > 0:
         print("  ... and {} more (see report)".format(remaining))
+
+
+def _cmd_quality(args: argparse.Namespace) -> int:
+    from . import quality as quality_mod
+
+    cfg = load_config(args.config)
+    findings = quality_mod.check_files(args.files,
+                                       budgets=cfg.quality_budgets(),
+                                       disabled=cfg.quality_disabled())
+    if not findings:
+        print("retrace quality: no findings in %d file(s)"
+              % len(args.files))
+        return EXIT_MATCHED
+    print(quality_mod.render_text(findings))
+    errors = quality_mod.error_count(findings)
+    print("retrace quality: %d blocking error(s), %d warning(s)"
+          % (errors, len(findings) - errors))
+    return EXIT_DIVERGED if errors else EXIT_MATCHED
 
 
 def _cmd_attest(args: argparse.Namespace) -> int:

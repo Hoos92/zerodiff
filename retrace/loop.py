@@ -34,7 +34,24 @@ Rules:
 - Never modify the traces directory, retrace.toml, or the report files.
 - Do not re-run the verification yourself; the loop does that.
 
+Secure & quality coding rules (statically enforced -- the loop will not
+finish while violations remain):
+- Never use eval/exec, os.system, or subprocess with shell=True.
+- Never deserialize with pickle/marshal or yaml.load without SafeLoader.
+- Build SQL only with parameterized queries; never interpolate values.
+- No hardcoded secrets or tokens; read them from the environment.
+- Never disable TLS certificate verification.
+- Catch specific exceptions; never swallow errors with `except: pass`.
+- No mutable default arguments.
+- Keep functions small and flat (length/complexity/nesting budgets).
+- Add no new dependencies and no network or filesystem access the
+  original did not have.
+
 Divergences ({count} shown of {total}):
+"""
+
+QUALITY_SECTION = """
+Security/quality findings in the rewrite ({errors} blocking, {warns} warnings):
 """
 
 PROMPT_ENTRY = """\
@@ -46,7 +63,7 @@ PROMPT_ENTRY = """\
 """
 
 
-def build_prompt(report: Dict) -> str:
+def build_prompt(report: Dict, quality_findings=None) -> str:
     divergences = report["divergences"]
     shown = divergences[:MAX_PROMPT_DIVERGENCES]
     lines = [PROMPT_HEADER.format(count=len(shown), total=len(divergences))]
@@ -57,11 +74,35 @@ def build_prompt(report: Dict) -> str:
             expected=str(d["expected"])[:200],
             actual=str(d["actual"])[:200],
             hint=d["hint"]))
+    if quality_findings:
+        from . import quality as quality_mod
+
+        errors = quality_mod.error_count(quality_findings)
+        lines.append(QUALITY_SECTION.format(
+            errors=errors, warns=len(quality_findings) - errors))
+        lines.append(quality_mod.render_text(quality_findings))
     mappings = report.get("mappings") or {}
     if mappings:
         lines.append("The rewrite modules (old -> new): " + ", ".join(
             "%s -> %s" % (k, v) for k, v in sorted(mappings.items())))
     return "\n".join(lines) + "\n"
+
+
+def rewrite_files(mappings: Dict[str, str], workdir: str):
+    """Resolve mapped rewrite module prefixes to existing source files."""
+    paths = []
+    for new_prefix in sorted(set(mappings.values())):
+        candidate = os.path.join(workdir,
+                                 new_prefix.replace(".", os.sep) + ".py")
+        if os.path.exists(candidate):
+            paths.append(candidate)
+        else:
+            package_init = os.path.join(workdir,
+                                        new_prefix.replace(".", os.sep),
+                                        "__init__.py")
+            if os.path.exists(package_init):
+                paths.append(package_init)
+    return paths
 
 
 def run_agent(agent_cmd: str, prompt: str, workdir: str) -> int:
@@ -81,28 +122,48 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
              agent_cmd: str, max_iters: int = 5,
              timeout: float = 30.0, workdir: str = ".",
              json_out: str = report_mod.REPORT_JSON,
-             md_out: str = report_mod.REPORT_MD) -> int:
-    """Returns the number of divergences remaining (0 = success).
+             md_out: str = report_mod.REPORT_MD,
+             quality_gate: bool = True) -> int:
+    """Returns the number of blocking problems remaining (0 = success):
+    behavioral divergences plus, with the quality gate on (default),
+    error-severity security/quality findings in the rewrite files.
 
     Replays always run isolated: each iteration gets a fresh worker
     process, so the agent's edits are actually re-imported (an in-process
     replay would keep testing the stale module from before the fix)."""
+    from . import quality as quality_mod
+
+    remaining = 0
     for iteration in range(1, max_iters + 1):
         result = replay_all(trace_dir, mappings, cfg, isolate=True,
                             timeout=timeout)
         report = report_mod.build_report(result.to_dict(), trace_dir,
                                          mappings)
         report_mod.write_reports(report, json_out, md_out)
-        remaining = report["summary"]["divergence_count"]
-        print("retrace loop: iteration %d: %d of %d matched, %d divergences"
+        divergences = report["summary"]["divergence_count"]
+
+        findings = []
+        if quality_gate:
+            findings = quality_mod.check_files(
+                rewrite_files(mappings, workdir),
+                budgets=cfg.quality_budgets(),
+                disabled=cfg.quality_disabled())
+        blocking = quality_mod.error_count(findings)
+        remaining = divergences + blocking
+
+        print("retrace loop: iteration %d: %d of %d matched, "
+              "%d divergences, %d blocking quality findings"
               % (iteration, report["summary"]["matched"],
-                 report["summary"]["replayed"], remaining))
+                 report["summary"]["replayed"], divergences, blocking))
         if remaining == 0:
+            if findings:  # non-blocking warnings still worth surfacing
+                print("retrace loop: quality warnings (non-blocking):")
+                print(quality_mod.render_text(findings))
             return 0
         if iteration == max_iters:
             break
         print("retrace loop: invoking agent...")
-        code = run_agent(agent_cmd, build_prompt(report), workdir)
+        code = run_agent(agent_cmd, build_prompt(report, findings), workdir)
         if code != 0:
             print("retrace loop: warning: agent exited with code %d" % code)
     return remaining

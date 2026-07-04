@@ -30,6 +30,25 @@ levels of that, all vendor-neutral:
 
 Retrace itself never calls a model. Your traces never leave your machine.
 
+## Which LLM does the agent loop use?
+
+None of its own. `retrace loop` / `retrace migrate` run whatever CLI
+command you pass as `--agent` — with `--agent "claude -p ..."` the model
+is Claude, with `--agent "codex exec ..."` it's OpenAI's, and a plain
+shell script works too. Retrace pipes the divergence report in and
+verifies what came out; the model choice, permissions, and API costs are
+entirely yours.
+
+## What stops the agent from writing insecure code?
+
+Two layers (see [SAFE_CODING.md](SAFE_CODING.md)): every fix prompt
+carries explicit secure-coding rules, and a built-in static gate
+(zero-dependency AST analysis) blocks the loop while error-severity
+findings remain — eval/exec, shell=True, SQL interpolation, hardcoded
+secrets, disabled TLS verification, unsafe deserialization, and more. A
+rewrite that matches every recorded behavior but uses `eval()` does not
+go green.
+
 ## Does it work for languages other than Python?
 
 Today, recording and replay are Python-only (the recorder wraps Python

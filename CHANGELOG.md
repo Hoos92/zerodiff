@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 — 2026-07-04
+
+- security/quality gate (docs/SAFE_CODING.md): zero-dependency AST
+  analysis blocking eval/exec, shell=True, SQL interpolation, hardcoded
+  secrets, unsafe deserialization, disabled TLS verification, insecure
+  tempfiles; warns on weak hashes, exception-swallowing, mutable
+  defaults, and length/complexity/nesting budget violations
+- enforced in `retrace loop` / `retrace migrate` by default (findings are
+  appended to the agent's fix prompt; the loop won't go green while
+  blocking findings remain; `--no-quality` opts out); standalone
+  `retrace quality FILE...`; budgets configurable via `[quality]` in
+  retrace.toml
+- secure-coding rules embedded in every agent fix prompt
+
 ## 0.6.0 — 2026-07-04
 
 - `retrace replay` warns loudly when no `[map]` entry applied to any
