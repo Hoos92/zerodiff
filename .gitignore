@@ -14,3 +14,11 @@ dist/
 .pytest_cache/
 .venv/
 venv/
+
+# run artifacts and keys must never be committed
+.retrace/
+**/.retrace/
+retrace-attestation.json
+retrace-junit.xml
+retrace-fix-prompt.md
+*.key
