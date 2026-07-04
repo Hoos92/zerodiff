@@ -25,6 +25,7 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 | `testing.py`    | `verify_traces()` one-liner for pytest/unittest: raises BehaviorMismatch (an AssertionError) with a divergence digest |
 | `scaffold.py`   | `retrace init` (project scaffolding) and `retrace demo` (guided 30-second example) |
 | `enterprise.py` | commercial tier (see COMMERCIAL.md): HMAC-signed tamper-evident attestations, replay history |
+| `migrate.py`    | `retrace migrate`: the paired pipeline — record → scaffold rewrite stubs from recorded boundaries → agent loop → optional attestation. The agent writes; Retrace judges |
 | `serializer.py` | canonical, deterministic encoding of Python values to JSON-safe trees; adapter registry; opaque fallback with digest |
 | `store.py`      | JSONL trace files (one per boundary), schema versioning, iteration |
 | `config.py`     | `retrace.toml` loading (mappings, scrubbers); minimal built-in TOML-subset reader so Python 3.8 works with zero dependencies |

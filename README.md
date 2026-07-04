@@ -79,6 +79,15 @@ retrace replay -t traces --isolate --timeout 10
 Retrace is vendor-neutral: it verifies code, not agents.
 
 ```bash
+# the whole verified migration in one command: record the legacy code,
+# scaffold the rewrite, drive YOUR agent until every recorded behavior
+# matches, finish with signed evidence
+retrace migrate --include billing.pricing \
+    --driver "python run_scenarios.py" \
+    --map billing.pricing:pricing_v2 \
+    --agent "claude -p --permission-mode acceptEdits" \
+    --attest --key-file team.key
+
 # unattended fix loop with any agent CLI
 retrace loop -t traces --agent "claude -p --permission-mode acceptEdits"
 retrace loop -t traces --agent "codex exec --full-auto {prompt_file}"
@@ -170,7 +179,8 @@ replay with crash/hang detection (`--isolate`), and record-time redaction.
 0.3 added the agent loop (`retrace loop`), the MCP server (`retrace mcp`),
 and the GitHub Action / Claude Code hook integrations. 0.4 added
 `retrace init`/`demo`, the `retrace.testing` pytest helper, JUnit output,
-and the Enterprise attestation/history layer.
+and the Enterprise attestation/history layer. 0.5 added `retrace migrate`
+— the end-to-end verified migration pipeline.
 Roadmap: HTTP service-level recording, side-effect interception,
 dependency-upgrade guard.
 

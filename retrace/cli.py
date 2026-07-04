@@ -107,6 +107,33 @@ def main(argv: Optional[List[str]] = None) -> int:
         "mcp", help="run the MCP server on stdio (register with: "
                     "claude mcp add retrace -- retrace mcp)")
 
+    p_migrate = sub.add_parser(
+        "migrate", help="the whole verified migration in one command: "
+                        "record -> scaffold -> agent loop -> attestation")
+    p_migrate.add_argument("--include", action="append", default=[],
+                           metavar="PATTERN",
+                           help="modules to record (zero-edit), repeatable")
+    p_migrate.add_argument("--driver", default=None,
+                           help="command that exercises the legacy code, "
+                                "e.g. \"python run_scenarios.py\"")
+    p_migrate.add_argument("--map", action="append", default=[],
+                           metavar="OLD:NEW", help="old:new module mapping "
+                           "(repeatable; merged with retrace.toml [map])")
+    p_migrate.add_argument("--agent", required=True,
+                           help="agent CLI that writes/fixes the rewrite; "
+                                "prompt via stdin or {prompt_file}")
+    p_migrate.add_argument("-t", "--traces", default="traces")
+    p_migrate.add_argument("--skip-record", action="store_true",
+                           help="reuse existing traces instead of "
+                                "re-recording")
+    p_migrate.add_argument("--max-iters", type=int, default=8)
+    p_migrate.add_argument("--timeout", type=float, default=30.0)
+    p_migrate.add_argument("--config", default=None)
+    p_migrate.add_argument("--attest", action="store_true",
+                           help="finish with a signed attestation "
+                                "(Enterprise; requires --key-file)")
+    p_migrate.add_argument("--key-file", default=None)
+
     sub.add_parser("init", help="scaffold retrace.toml and .gitignore "
                                 "entries in the current project")
     sub.add_parser("demo", help="30-second guided demo: record a legacy "
@@ -150,6 +177,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             from .mcp_server import main as mcp_main
             mcp_main()
             return EXIT_MATCHED
+        if args.command == "migrate":
+            from .migrate import cmd_migrate
+            return cmd_migrate(args)
         if args.command == "init":
             from .scaffold import cmd_init
             return cmd_init()
