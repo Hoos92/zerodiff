@@ -1,0 +1,54 @@
+name: "Retrace behavioral gate"
+description: >-
+  Replay recorded behavioral traces against the code in this PR and fail
+  the check if any recorded behavior diverged. Works on code written by
+  any agent or human.
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  traces-dir:
+    description: "Directory containing recorded .jsonl traces"
+    required: false
+    default: "traces"
+  map:
+    description: "Optional OLD:NEW module mapping (repeat with commas)"
+    required: false
+    default: ""
+  workdir:
+    description: "Directory to run in (where the rewrite is importable)"
+    required: false
+    default: "."
+  isolate:
+    description: "Replay each call in a worker subprocess (crash-proof)"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install retrace
+      shell: bash
+      # once published: pip install retrace-harness
+      run: pip install "retrace-harness @ git+https://github.com/OWNER/retrace"
+    - name: Replay recorded behaviors
+      shell: bash
+      working-directory: ${{ inputs.workdir }}
+      run: |
+        ARGS=(-t "${{ inputs.traces-dir }}")
+        if [ "${{ inputs.isolate }}" = "true" ]; then ARGS+=(--isolate); fi
+        IFS=',' read -ra MAPS <<< "${{ inputs.map }}"
+        for m in "${MAPS[@]}"; do
+          [ -n "$m" ] && ARGS+=(--map "$m")
+        done
+        retrace replay "${ARGS[@]}"
+    - name: Upload report
+      if: always()
+      shell: bash
+      working-directory: ${{ inputs.workdir }}
+      run: |
+        if [ -f retrace-report.md ]; then
+          echo "## Retrace behavioral report" >> "$GITHUB_STEP_SUMMARY"
+          cat retrace-report.md >> "$GITHUB_STEP_SUMMARY"
+        fi

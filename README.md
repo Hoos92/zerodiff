@@ -59,6 +59,23 @@ harness down:
 retrace replay -t traces --isolate --timeout 10
 ```
 
+## Agent-native workflows
+
+Retrace is vendor-neutral: it verifies code, not agents.
+
+```bash
+# unattended fix loop with any agent CLI
+retrace loop -t traces --agent "claude -p --permission-mode acceptEdits"
+retrace loop -t traces --agent "codex exec --full-auto {prompt_file}"
+
+# MCP server: Claude Code / Codex / Copilot / Cursor call verification natively
+claude mcp add retrace -- retrace mcp
+```
+
+There's also a [GitHub Action](integrations/github-action/) that gates PRs
+on recorded behavior, and a [Claude Code hook](integrations/claude-code/)
+that blocks any edit which breaks it.
+
 Exit codes: `0` = every recorded behavior matched, `1` = divergences found,
 `2` = harness error. `retrace-report.json` is designed to be fed straight back
 to a coding agent; `retrace-report.md` is for humans.
@@ -119,10 +136,12 @@ the trace files, not merely the report.
 
 ## Status
 
-v0.2 — Python 3.8+, function-level boundaries, zero runtime dependencies.
-New in 0.2: zero-edit auto-instrumentation (`--include`), subprocess-isolated
-replay with crash/hang detection (`--isolate`), record-time redaction.
-Roadmap: agent feedback-loop driver, MCP server, HTTP service-level
-recording, side-effect interception.
+v0.3 — Python 3.8+, function-level boundaries, zero runtime dependencies.
+0.2 added zero-edit auto-instrumentation (`--include`), subprocess-isolated
+replay with crash/hang detection (`--isolate`), and record-time redaction.
+0.3 added the agent loop (`retrace loop`), the MCP server (`retrace mcp`),
+and the GitHub Action / Claude Code hook integrations.
+Roadmap: HTTP service-level recording, side-effect interception,
+dependency-upgrade guard.
 
 MIT licensed.

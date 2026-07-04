@@ -20,6 +20,8 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 | `recorder.py`   | `@retrace.record` decorator, `retrace.wrap()`, activation via API or `RETRACE_TRACE_DIR` env var; captures args/kwargs/return/exception per call; applies record-time redaction |
 | `autohook.py`   | zero-edit auto-instrumentation: meta-path finder that wraps public module-level functions of modules matching `--include` patterns; injected into child processes via a temporary `sitecustomize` |
 | `worker.py`     | isolated replay worker (`--isolate`): JSON-lines protocol on a duplicated fd while user prints divert to stderr; crashes/hangs become reported behavior |
+| `loop.py`       | agent feedback loop (`retrace loop`): replay → fix prompt with all divergences → invoke any agent CLI → repeat; always isolates so agent edits are re-imported fresh |
+| `mcp_server.py` | zero-dep MCP server (`retrace mcp`): JSON-RPC 2.0 over stdio exposing retrace_replay/retrace_report to MCP-capable agents; isolates by default because the server is long-lived |
 | `serializer.py` | canonical, deterministic encoding of Python values to JSON-safe trees; adapter registry; opaque fallback with digest |
 | `store.py`      | JSONL trace files (one per boundary), schema versioning, iteration |
 | `config.py`     | `retrace.toml` loading (mappings, scrubbers); minimal built-in TOML-subset reader so Python 3.8 works with zero dependencies |

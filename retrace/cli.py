@@ -79,6 +79,28 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_report.add_argument("--format", choices=["md", "summary"],
                           default="summary")
 
+    p_loop = sub.add_parser(
+        "loop", help="replay, feed divergences to a coding agent, repeat "
+                     "until every recorded behavior matches")
+    p_loop.add_argument("-t", "--traces", default="traces")
+    p_loop.add_argument("--agent", required=True,
+                        help="agent command; gets the fix prompt on stdin, "
+                             "or use a {prompt_file} placeholder. e.g. "
+                             "--agent \"claude -p --permission-mode "
+                             "acceptEdits\"")
+    p_loop.add_argument("--max-iters", type=int, default=5)
+    p_loop.add_argument("--map", action="append", default=[],
+                        metavar="OLD:NEW")
+    p_loop.add_argument("--config", default=None)
+    p_loop.add_argument("--timeout", type=float, default=30.0,
+                        help="per-call replay timeout (loop always replays "
+                             "in isolated workers so agent edits are "
+                             "re-imported fresh)")
+
+    sub.add_parser(
+        "mcp", help="run the MCP server on stdio (register with: "
+                    "claude mcp add retrace -- retrace mcp)")
+
     args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
@@ -88,10 +110,36 @@ def main(argv: Optional[List[str]] = None) -> int:
             return _cmd_record(args)
         if args.command == "replay":
             return _cmd_replay(args)
+        if args.command == "loop":
+            return _cmd_loop(args)
+        if args.command == "mcp":
+            from .mcp_server import main as mcp_main
+            mcp_main()
+            return EXIT_MATCHED
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
         print("retrace: error: {}".format(exc), file=sys.stderr)
         return EXIT_ERROR
+
+
+def _cmd_loop(args: argparse.Namespace) -> int:
+    from .loop import run_loop
+
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+    cfg = load_config(args.config)
+    mappings = cfg.mappings()
+    mappings.update(_parse_map_args(args.map))
+    remaining = run_loop(args.traces, mappings, cfg, args.agent,
+                         max_iters=args.max_iters,
+                         timeout=args.timeout, workdir=cwd)
+    if remaining == 0:
+        print("retrace loop: all recorded behaviors match")
+        return EXIT_MATCHED
+    print("retrace loop: %d divergences remain after %d iterations"
+          % (remaining, args.max_iters))
+    return EXIT_DIVERGED
 
 
 def _cmd_record(args: argparse.Namespace) -> int:
