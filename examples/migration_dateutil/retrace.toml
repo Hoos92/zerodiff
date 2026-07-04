@@ -1,0 +1,4 @@
+# Replay recorded dateutil.easter behavior against the modern rewrite.
+
+[map]
+"dateutil.easter" = "easter_modern"

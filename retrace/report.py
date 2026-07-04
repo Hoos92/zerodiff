@@ -72,29 +72,49 @@ def render_markdown(report: Dict[str, Any]) -> str:
 
     lines.append("## Boundaries")
     lines.append("")
-    lines.append("| boundary | replayed | matched | diverged | skipped |")
-    lines.append("|---|---|---|---|---|")
+    lines.append("| boundary | replayed | matched | diverged | skipped "
+                 "| recorded exception behaviors |")
+    lines.append("|---|---|---|---|---|---|")
     for target in sorted(s["boundaries"]):
         b = s["boundaries"][target]
-        lines.append("| `{}` | {} | {} | {} | {} |".format(
-            target, b["replayed"], b["matched"], b["diverged"], b["skipped"]))
+        lines.append("| `{}` | {} | {} | {} | {} | {} |".format(
+            target, b["replayed"], b["matched"], b["diverged"], b["skipped"],
+            b.get("recorded_exceptions", 0)))
     lines.append("")
 
     if report["divergences"]:
+        kinds = {}
+        for d in report["divergences"]:
+            kinds[d["kind"]] = kinds.get(d["kind"], 0) + 1
         lines.append("## Divergences ({})".format(len(report["divergences"])))
         lines.append("")
-        for i, d in enumerate(report["divergences"], 1):
-            lines.append("### {}. `{}` — {}".format(i, d["boundary"],
-                                                    d["kind"]))
+        lines.append("| kind | count |")
+        lines.append("|---|---|")
+        for kind in sorted(kinds):
+            lines.append("| {} | {} |".format(kind, kinds[kind]))
+        lines.append("")
+
+        by_boundary = {}
+        for d in report["divergences"]:
+            by_boundary.setdefault(d["boundary"], []).append(d)
+        for boundary in sorted(by_boundary):
+            group = by_boundary[boundary]
+            lines.append("### `{}` ({} divergences)".format(boundary,
+                                                            len(group)))
             lines.append("")
-            lines.append("- **path**: `{}`".format(d["path"]))
-            lines.append("- **expected**: `{}`".format(
-                _md_code_safe(d["expected"])))
-            lines.append("- **actual**: `{}`".format(
-                _md_code_safe(d["actual"])))
-            lines.append("- **trace**: `{}`".format(d["trace_id"]))
-            lines.append("- **hint**: {}".format(d["hint"]))
-            lines.append("")
+            for i, d in enumerate(group, 1):
+                lines.append("{}. **{}** at `{}`".format(i, d["kind"],
+                                                         d["path"]))
+                if d.get("input"):
+                    lines.append("   - input: `{}`".format(
+                        _md_code_safe(d["input"])))
+                lines.append("   - expected: `{}`".format(
+                    _md_code_safe(d["expected"])))
+                lines.append("   - actual: `{}`".format(
+                    _md_code_safe(d["actual"])))
+                lines.append("   - hint: {}".format(d["hint"]))
+                lines.append("   - trace: `{}`".format(d["trace_id"]))
+                lines.append("")
 
     if report["skipped"]:
         lines.append("## Skipped traces ({})".format(len(report["skipped"])))

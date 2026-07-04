@@ -14,6 +14,7 @@ KIND_EXCEPTION = "exception_mismatch"
 KIND_MISSING = "missing_boundary"
 KIND_WEAK = "weak_comparison"
 KIND_REPLAY_ERROR = "replay_error"
+KIND_CRASH = "process_crash"
 
 _MARKERS = ("__tuple__", "__set__", "__dict__", "__bytes__", "__datetime__",
             "__date__", "__time__", "__decimal__", "__enum__",
@@ -58,7 +59,8 @@ def _preview(tree: Any, limit: int = 120) -> str:
 
 class Divergence:
     def __init__(self, kind: str, boundary: str, trace_id: str, path: str,
-                 expected: Any, actual: Any, hint: str) -> None:
+                 expected: Any, actual: Any, hint: str,
+                 input_preview: str = "") -> None:
         self.kind = kind
         self.boundary = boundary
         self.trace_id = trace_id
@@ -66,6 +68,7 @@ class Divergence:
         self.expected = expected
         self.actual = actual
         self.hint = hint
+        self.input_preview = input_preview
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -73,6 +76,7 @@ class Divergence:
             "boundary": self.boundary,
             "trace_id": self.trace_id,
             "path": self.path,
+            "input": self.input_preview,
             "expected": self.expected if self.expected is not _MISSING
             else "<missing>",
             "actual": self.actual if self.actual is not _MISSING
@@ -159,7 +163,8 @@ class _Ctx:
         if len(self.divergences) >= MAX_DIVERGENCES_PER_TRACE:
             return
         self.divergences.append(Divergence(
-            kind, self.boundary, self.trace_id, path, expected, actual, hint))
+            kind, self.boundary, self.trace_id, path, expected, actual, hint,
+            input_preview=self.input_preview))
 
     def finish(self) -> Tuple[List[Divergence], int]:
         return self.divergences, self.weak_matches

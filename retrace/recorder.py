@@ -21,9 +21,34 @@ from typing import Any, Callable, Optional
 from . import serializer, store
 
 _ENV_VAR = "RETRACE_TRACE_DIR"
+_ENV_CONFIG = "RETRACE_CONFIG"
 
 _active_dir = None  # type: Optional[str]
 _dropped = 0  # traces lost to recorder-internal errors (never raised)
+_config = None  # loaded lazily on first trace write
+
+
+def _get_config():
+    """Config for record-time redaction (RETRACE_CONFIG or ./retrace.toml).
+    A broken config must not break the recorded program."""
+    global _config
+    if _config is None:
+        from .config import Config, load_config
+        try:
+            _config = load_config(os.environ.get(_ENV_CONFIG))
+        except Exception:
+            _config = Config()
+    return _config
+
+
+def _redact(tree, target: str, base_path: str):
+    from . import scrubbers
+
+    redact_fields = _get_config().redact_fields(target)
+    if not redact_fields:
+        return tree
+    return scrubbers.scrub(tree, [], [], path=base_path,
+                           redact_fields=redact_fields)
 
 
 def start_recording(trace_dir: str) -> None:
@@ -55,9 +80,15 @@ def _write_trace(target: str, trace_dir: str, args: tuple, kwargs: dict,
     global _dropped
     try:
         encoded_input = {
-            "args": [serializer.encode(a) for a in args],
-            "kwargs": {k: serializer.encode(v) for k, v in kwargs.items()},
+            "args": [_redact(serializer.encode(a), target, "input")
+                     for a in args],
+            "kwargs": {k: _redact(serializer.encode(v), target, "input")
+                       for k, v in kwargs.items()},
         }
+        if output.get("type") == "return":
+            output = {"type": "return",
+                      "value": _redact(output.get("value"), target,
+                                       "output")}
         trace = {
             "schema": store.SCHEMA_VERSION,
             "id": store.trace_id(target, encoded_input),

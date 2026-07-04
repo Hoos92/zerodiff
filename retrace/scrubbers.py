@@ -8,9 +8,10 @@ matched.
 """
 
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 SCRUBBED = "__scrubbed__"
+REDACTED = "__redacted__"
 
 BUILTIN_PATTERNS = {
     "uuid": re.compile(
@@ -33,27 +34,40 @@ def _field_matches(key: str, path: str, patterns: List[str]) -> bool:
     return False
 
 
-def scrub(tree: Any, ignore_fields: List[str],
-          regexes: List[Any], path: str = "output") -> Any:
-    """Return a copy of the encoded tree with configured noise normalized."""
+def scrub(tree: Any, ignore_fields: List[str], regexes: List[Any],
+          path: str = "output", redact_fields: Optional[List[str]] = None
+          ) -> Any:
+    """Return a copy of the encoded tree with configured noise normalized.
+
+    ``redact_fields`` works like ``ignore_fields`` but uses a distinct
+    sentinel; the recorder also applies it at record time, so redacted
+    values are never written to disk.
+    """
+    redact_fields = redact_fields or []
     if isinstance(tree, str):
         out = tree
         for rx in regexes:
             out = rx.sub(SCRUBBED, out)
         return out
     if isinstance(tree, list):
-        return [scrub(v, ignore_fields, regexes, "%s[%d]" % (path, i))
+        return [scrub(v, ignore_fields, regexes, "%s[%d]" % (path, i),
+                      redact_fields)
                 for i, v in enumerate(tree)]
     if isinstance(tree, dict):
         # marker nodes pass through with their contents scrubbed
         result = {}
         for key, value in tree.items():
             child_path = "%s.%s" % (path, key)
-            if not key.startswith("__") and \
-                    _field_matches(key, child_path, ignore_fields):
+            if key.startswith("__"):
+                result[key] = scrub(value, ignore_fields, regexes,
+                                    child_path, redact_fields)
+            elif _field_matches(key, child_path, redact_fields):
+                result[key] = REDACTED
+            elif _field_matches(key, child_path, ignore_fields):
                 result[key] = SCRUBBED
             else:
-                result[key] = scrub(value, ignore_fields, regexes, child_path)
+                result[key] = scrub(value, ignore_fields, regexes,
+                                    child_path, redact_fields)
         return result
     return tree
 
@@ -74,6 +88,7 @@ def compile_scrubbers(cfg, boundary: str) -> Dict[str, Any]:
         regexes.append(re.compile(pattern))
     return {
         "ignore_fields": cfg.ignore_fields(boundary),
+        "redact_fields": cfg.redact_fields(boundary),
         "regexes": regexes,
         "float_tolerance": cfg.float_tolerance(boundary),
     }

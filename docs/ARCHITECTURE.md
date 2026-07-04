@@ -17,7 +17,9 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 
 | Module          | Responsibility |
 |-----------------|----------------|
-| `recorder.py`   | `@retrace.record` decorator, `retrace.wrap()`, activation via API or `RETRACE_TRACE_DIR` env var; captures args/kwargs/return/exception per call |
+| `recorder.py`   | `@retrace.record` decorator, `retrace.wrap()`, activation via API or `RETRACE_TRACE_DIR` env var; captures args/kwargs/return/exception per call; applies record-time redaction |
+| `autohook.py`   | zero-edit auto-instrumentation: meta-path finder that wraps public module-level functions of modules matching `--include` patterns; injected into child processes via a temporary `sitecustomize` |
+| `worker.py`     | isolated replay worker (`--isolate`): JSON-lines protocol on a duplicated fd while user prints divert to stderr; crashes/hangs become reported behavior |
 | `serializer.py` | canonical, deterministic encoding of Python values to JSON-safe trees; adapter registry; opaque fallback with digest |
 | `store.py`      | JSONL trace files (one per boundary), schema versioning, iteration |
 | `config.py`     | `retrace.toml` loading (mappings, scrubbers); minimal built-in TOML-subset reader so Python 3.8 works with zero dependencies |
@@ -84,6 +86,7 @@ contain opaque values cannot be faithfully replayed; they are reported as
 | `missing_boundary`    | mapping doesn't resolve to a callable in the rewrite |
 | `weak_comparison`     | opaque digests differ — a change Retrace can see but not explain |
 | `replay_error`        | the harness itself failed on this trace (reported, never hidden) |
+| `process_crash`       | (`--isolate` only) the rewrite killed or hung the worker process where the original completed |
 
 Every divergence carries `boundary`, `trace_id`, `path`, `expected`, `actual`,
 and a generated `hint` — a sentence written for a coding agent, e.g.:
@@ -111,9 +114,15 @@ and a generated `hint` — a sentence written for a coding agent, e.g.:
   access (`module.Class.method`); closures and lambdas are not recordable.
 - **Side effects pass through**: replaying a function that writes to a DB
   writes to the DB. VCR-style interception is a later phase; the README warns.
-- **In-process replay**: the rewrite is imported into the harness process.
-  A hostile or crashing rewrite can take the run down (subprocess isolation
-  is a later phase); per-call exceptions are contained.
+- **In-process replay by default**: the rewrite is imported into the
+  harness process; per-call exceptions are contained. Use `--isolate` for
+  untrusted rewrites — each call runs in a worker subprocess and crashes,
+  `os._exit`, and hangs (per-call `--timeout`) are reported as
+  `process_crash` divergences.
+- **Auto-instrumentation scope**: `--include` wraps public module-level
+  functions of filesystem-based modules only; class methods and closures
+  need `retrace.wrap` or the decorator. The injected `sitecustomize`
+  shadows any existing one for that run.
 - **Recording overhead** makes it suited to test/staging/driver runs, not hot
   production paths.
 - **Concurrency**: the JSONL appender is safe for single-process recording;

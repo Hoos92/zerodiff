@@ -31,8 +31,15 @@ $ retrace replay -t traces --map "billing:billing_v2"
 pip install -e .
 ```
 
-Mark the boundaries you care about in the legacy code (or wrap them from a
-driver script without touching the source):
+Record with **zero source edits** — `--include` auto-instruments every
+public function of matching modules as they load:
+
+```bash
+retrace record --include billing -o traces -- python run_legacy_scenarios.py
+retrace replay -t traces --map "billing:billing_v2"
+```
+
+Or mark boundaries explicitly when you want tighter control:
 
 ```python
 import retrace
@@ -43,11 +50,13 @@ def calc_price(order): ...
 retrace.wrap("billing.pricing", "calc_price")   # option B: wrap from outside
 ```
 
-Record real behavior, then replay against the rewrite:
+Replaying an untrusted rewrite? `--isolate` runs every call in a worker
+subprocess: a rewrite that crashes the interpreter, calls `os._exit`, or
+hangs becomes a reported `process_crash` divergence instead of taking the
+harness down:
 
 ```bash
-retrace record -o traces -- python run_legacy_scenarios.py
-retrace replay -t traces --map "billing.pricing:billing_v2.pricing"
+retrace replay -t traces --isolate --timeout 10
 ```
 
 Exit codes: `0` = every recorded behavior matched, `1` = divergences found,
@@ -85,22 +94,32 @@ irrelevant differences don't drown real ones:
 [scrub]
 float_tolerance = 1e-9
 builtin = ["uuid", "timestamp"]        # scrub UUID/ISO-timestamp strings
+redact_fields = ["password", "*.api_token"]   # never written to disk at all
 
 [scrub.boundaries."billing.pricing.make_receipt"]
 ignore_fields = ["generated_at", "trace_id"]
 ```
 
-## Demo
+`redact_fields` is applied **at record time** — redacted values never reach
+the trace files, not merely the report.
 
-`examples/legacy_pricing/` contains a deliberately gnarly legacy pricing
-module, an equivalent modern rewrite, and a rewrite with seeded behavioral
-bugs. See [examples/legacy_pricing/README.md](examples/legacy_pricing/README.md)
-to run the full record → replay → report loop in under a minute.
+## Demos
+
+- `examples/legacy_pricing/` — a deliberately gnarly legacy pricing module,
+  an equivalent modern rewrite, and a rewrite with five seeded behavioral
+  bugs (all caught). Full loop in under a minute.
+- `examples/migration_dateutil/` — a **real PyPI package**: the behavior of
+  `dateutil.easter` (1,145 recorded behaviors) verified against a clean
+  modern rewrite, with zero source edits. Retrace caught the one divergence
+  a human review would wave through. Write-up with numbers:
+  [docs/CASE_STUDY.md](docs/CASE_STUDY.md).
 
 ## Status
 
-v0.1 — Python 3.8+, function-level boundaries, zero runtime dependencies.
-Roadmap: import-hook auto-instrumentation, agent feedback-loop driver, MCP
-server, HTTP service-level recording, side-effect interception.
+v0.2 — Python 3.8+, function-level boundaries, zero runtime dependencies.
+New in 0.2: zero-edit auto-instrumentation (`--include`), subprocess-isolated
+replay with crash/hang detection (`--isolate`), record-time redaction.
+Roadmap: agent feedback-loop driver, MCP server, HTTP service-level
+recording, side-effect interception.
 
 MIT licensed.

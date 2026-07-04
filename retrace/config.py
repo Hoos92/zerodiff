@@ -34,6 +34,11 @@ class Config:
         fields.extend(self._boundary_scrub(boundary).get("ignore_fields", []))
         return fields
 
+    def redact_fields(self, boundary: str) -> List[str]:
+        fields = list(self._scrub().get("redact_fields", []))
+        fields.extend(self._boundary_scrub(boundary).get("redact_fields", []))
+        return fields
+
     def builtin_scrubbers(self, boundary: str) -> List[str]:
         names = list(self._scrub().get("builtin", []))
         names.extend(self._boundary_scrub(boundary).get("builtin", []))

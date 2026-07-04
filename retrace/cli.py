@@ -8,8 +8,10 @@ inside an agent feedback loop.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Dict, List, Optional
 
 from . import __version__, report as report_mod, store
@@ -34,6 +36,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         "record", help="run a command with recording enabled")
     p_record.add_argument("-o", "--out", default="traces",
                           help="trace directory (default: traces)")
+    p_record.add_argument("--include", action="append", default=[],
+                          metavar="PATTERN",
+                          help="auto-instrument matching modules with no "
+                               "source edits (e.g. --include billing or "
+                               "--include 'billing.*'; repeatable). Wraps "
+                               "public module-level functions. Injects a "
+                               "sitecustomize via PYTHONPATH, which shadows "
+                               "any existing sitecustomize for this run.")
+    p_record.add_argument("--config", default=None,
+                          help="retrace.toml for record-time redaction "
+                               "(default: ./retrace.toml if present)")
     p_record.add_argument("cmd", nargs=argparse.REMAINDER,
                           help="command to run, e.g.: -- python driver.py")
 
@@ -49,6 +62,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_replay.add_argument("--config", default=None,
                           help="path to retrace.toml (default: ./retrace.toml "
                                "if present)")
+    p_replay.add_argument("--isolate", action="store_true",
+                          help="replay each call in a worker subprocess; a "
+                               "rewrite that crashes, calls os._exit, or "
+                               "hangs becomes a reported divergence instead "
+                               "of taking the harness down")
+    p_replay.add_argument("--timeout", type=float, default=30.0,
+                          help="per-call timeout in seconds with --isolate "
+                               "(default: 30)")
     p_replay.add_argument("--json-out", default=report_mod.REPORT_JSON)
     p_replay.add_argument("--md-out", default=report_mod.REPORT_MD)
 
@@ -85,9 +106,27 @@ def _cmd_record(args: argparse.Namespace) -> int:
     trace_dir = os.path.abspath(args.out)
     env = dict(os.environ)
     env["RETRACE_TRACE_DIR"] = trace_dir
+    if args.config:
+        env["RETRACE_CONFIG"] = os.path.abspath(args.config)
+
+    boot_dir = None
+    if args.include:
+        from .autohook import SITECUSTOMIZE
+        boot_dir = tempfile.mkdtemp(prefix="retrace-boot-")
+        with open(os.path.join(boot_dir, "sitecustomize.py"), "w",
+                  encoding="utf-8", newline="\n") as f:
+            f.write(SITECUSTOMIZE)
+        env["RETRACE_INCLUDE"] = ",".join(args.include)
+        existing = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = boot_dir + (
+            os.pathsep + existing if existing else "")
 
     before = _count_traces(trace_dir)
-    proc = subprocess.run(cmd, env=env)
+    try:
+        proc = subprocess.run(cmd, env=env)
+    finally:
+        if boot_dir is not None:
+            shutil.rmtree(boot_dir, ignore_errors=True)
     after, boundaries = _count_traces(trace_dir), _count_boundaries(trace_dir)
     print("retrace: recorded {} calls across {} boundaries -> {}".format(
         after - before, boundaries, trace_dir))
@@ -133,7 +172,8 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     mappings = cfg.mappings()
     mappings.update(_parse_map_args(args.map))
 
-    result = replay_all(args.traces, mappings, cfg)
+    result = replay_all(args.traces, mappings, cfg,
+                        isolate=args.isolate, timeout=args.timeout)
     report = report_mod.build_report(result.to_dict(), args.traces, mappings)
     report_mod.write_reports(report, args.json_out, args.md_out)
 
