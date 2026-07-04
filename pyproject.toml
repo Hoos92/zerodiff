@@ -28,7 +28,7 @@ dev = ["pytest>=7.0"]
 retrace = "retrace.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/retrace-harness/retrace"
+Homepage = "https://github.com/Hoos92/retrace"
 
 [tool.setuptools]
 packages = ["retrace"]

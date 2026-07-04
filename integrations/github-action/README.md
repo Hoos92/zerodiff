@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: OWNER/retrace/integrations/github-action@main
+      - uses: Hoos92/retrace/integrations/github-action@main
         with:
           traces-dir: traces
           map: "billing:billing_v2"

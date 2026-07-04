@@ -31,7 +31,7 @@ runs:
     - name: Install retrace
       shell: bash
       # once published: pip install retrace-harness
-      run: pip install "retrace-harness @ git+https://github.com/OWNER/retrace"
+      run: pip install "retrace-harness @ git+https://github.com/Hoos92/retrace"
     - name: Replay recorded behaviors
       shell: bash
       working-directory: ${{ inputs.workdir }}

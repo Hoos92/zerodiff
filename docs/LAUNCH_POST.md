@@ -96,5 +96,5 @@ review it. Generation is solved; trust is not. The original's recorded
 behavior is the one ground truth that requires no one to understand the
 code — which matters, because for most legacy code, nobody does.
 
-Repo: [link] — the four experiments are in `examples/`, each reproducible
-in under a minute.
+Repo: https://github.com/Hoos92/retrace — the experiments are in
+`examples/`, each reproducible in under a minute.

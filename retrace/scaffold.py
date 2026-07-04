@@ -8,7 +8,7 @@ import textwrap
 
 CONFIG_TEMPLATE = """\
 # retrace.toml -- behavioral verification config
-# Docs: https://github.com/retrace-harness/retrace
+# Docs: https://github.com/Hoos92/retrace
 
 [map]
 # Where recorded boundaries should be replayed. old prefix = new prefix:
