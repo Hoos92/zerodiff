@@ -21,6 +21,13 @@ CONFIG_TEMPLATE = """\
 # ignore_fields = ["*.request_id"]
 # Redact secrets AT RECORD TIME (never written to disk):
 # redact_fields = ["password", "*.api_token"]
+
+[quality]
+# Budgets for the security/quality gate (docs/SAFE_CODING.md):
+# max_function_lines = 60
+# max_complexity = 10
+# max_nesting = 5
+# disable = ["weak-hash"]
 """
 
 GITIGNORE_LINES = ["traces/", "retrace-report.json", "retrace-report.md",

@@ -52,6 +52,18 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
   behavior**: the rewrite must raise the same exception type for the same
   input — silently returning a value where the original raised is a
   divergence (a common and dangerous AI-rewrite failure mode).
+- **In-place argument mutation is first-class behavior too** (0.8):
+  inputs are encoded *before* the call; afterwards, any argument whose
+  encoding changed is stored under `"mutations"` (`{"0": <after>, "kw:name":
+  <after>}`). Replay re-checks: a rewrite that returns the right value but
+  forgets to mutate (or mutates differently) diverges at
+  `mutation.args[N]`. An empty `mutations` dict means "captured, nothing
+  mutated"; an absent field means "not captured" (old traces / `[record]
+  mutations = false`) and is not checked.
+- `meta.seq` is a process-wide counter preserving global chronology;
+  `retrace replay --in-order` replays **every** call (no deduplication)
+  sorted by `(ts, seq)` — required for code with module-level state,
+  where identical inputs legitimately produce different outputs.
 - `boundary.kind` is extensible. v1 only emits `"function"`; an HTTP recorder
   can later emit `"http"` traces and reuse the differ/report layers unchanged.
 - `id` is a content hash of boundary + canonical input, so identical calls
@@ -133,3 +145,9 @@ and a generated `hint` — a sentence written for a coding agent, e.g.:
   production paths.
 - **Concurrency**: the JSONL appender is safe for single-process recording;
   multi-process recording to the same directory is not yet coordinated.
+  Replay can parallelize across isolated workers (`--jobs N`; incompatible
+  with `--in-order`, since shards can't preserve global chronology).
+- **Loop economics**: the agent loop stops early when two consecutive
+  iterations produce an identical problem fingerprint (agent stalled) and
+  kills agents that exceed `--agent-timeout` — no burning API spend on a
+  stuck loop.

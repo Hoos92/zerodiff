@@ -49,6 +49,13 @@ class Config:
         entries.extend(self._boundary_scrub(boundary).get("regex", []))
         return entries
 
+    # -- recording ---------------------------------------------------------
+    def record_mutations(self) -> bool:
+        record = self.data.get("record", {})
+        if not isinstance(record, dict):
+            return True
+        return bool(record.get("mutations", True))
+
     # -- quality gate ------------------------------------------------------
     def quality_budgets(self) -> Dict[str, int]:
         quality = self.data.get("quality", {})

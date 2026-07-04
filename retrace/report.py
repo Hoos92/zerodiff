@@ -69,6 +69,14 @@ def render_markdown(report: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("Coverage note: {}".format(report["note"]))
     lines.append("")
+    if s.get("python_version_mismatch"):
+        lines.append("> **Environment note:** traces were recorded on "
+                     "Python {} but replayed on Python {} -- some "
+                     "divergences may stem from interpreter differences "
+                     "rather than the rewrite.".format(
+                         "/".join(s.get("recorded_python", [])),
+                         s.get("replay_python")))
+        lines.append("")
 
     lines.append("## Boundaries")
     lines.append("")
@@ -82,6 +90,7 @@ def render_markdown(report: Dict[str, Any]) -> str:
             b.get("recorded_exceptions", 0)))
     lines.append("")
 
+    MD_DIVERGENCE_CAP = 100
     if report["divergences"]:
         kinds = {}
         for d in report["divergences"]:
@@ -94,8 +103,15 @@ def render_markdown(report: Dict[str, Any]) -> str:
             lines.append("| {} | {} |".format(kind, kinds[kind]))
         lines.append("")
 
+        shown = report["divergences"][:MD_DIVERGENCE_CAP]
+        overflow = len(report["divergences"]) - len(shown)
+        if overflow > 0:
+            lines.append("_Showing the first {} divergences; {} more in "
+                         "retrace-report.json._".format(len(shown),
+                                                        overflow))
+            lines.append("")
         by_boundary = {}
-        for d in report["divergences"]:
+        for d in shown:
             by_boundary.setdefault(d["boundary"], []).append(d)
         for boundary in sorted(by_boundary):
             group = by_boundary[boundary]

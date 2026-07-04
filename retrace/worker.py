@@ -32,18 +32,27 @@ def handle(request):
                   for k, v in encoded_input.get("kwargs", {}).items()}
     except serializer.OpaqueValueError as exc:
         return {"status": "unreplayable", "reason": str(exc)}
+    from .replayer import _encode_args, compute_replay_mutations
+
+    before = _encode_args(args, kwargs)
     try:
         value = fn(*args, **kwargs)
-        return {"status": "ok",
-                "output": {"type": "return",
-                           "value": serializer.encode(value)}}
+        outcome = {"status": "ok",
+                   "output": {"type": "return",
+                              "value": serializer.encode(value)}}
     except KeyboardInterrupt:
         raise
     except BaseException as exc:  # SystemExit etc. are behavior too
-        return {"status": "ok",
-                "output": {"type": "exception",
-                           "exception": {"type": type(exc).__name__,
-                                         "message": str(exc)}}}
+        outcome = {"status": "ok",
+                   "output": {"type": "exception",
+                              "exception": {"type": type(exc).__name__,
+                                            "message": str(exc)}}}
+    try:
+        outcome["mutations"] = compute_replay_mutations(before, args,
+                                                        kwargs)
+    except Exception:
+        pass
+    return outcome
 
 
 def main():

@@ -71,6 +71,29 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "retrace_quality",
+        "description": (
+            "Run the security/quality gate on source files: flags "
+            "eval/exec, shell=True, SQL interpolation, hardcoded secrets, "
+            "unsafe deserialization, disabled TLS verification, and "
+            "complexity budget violations. Error-severity findings mean "
+            "the code must not ship."),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "source files to analyze"},
+                "config": {
+                    "type": "string",
+                    "description": "path to retrace.toml for [quality] "
+                                   "budgets (optional)"},
+            },
+            "required": ["files"],
+        },
+    },
 ]
 
 
@@ -100,6 +123,21 @@ def _tool_report(args: Dict[str, Any]) -> Dict[str, Any]:
     path = args.get("report_path") or report_mod.REPORT_JSON
     with open(path, "r", encoding="utf-8") as f:
         return _digest(json.load(f))
+
+
+def _tool_quality(args: Dict[str, Any]) -> Dict[str, Any]:
+    from . import quality
+
+    cfg = load_config(args.get("config"))
+    findings = quality.check_files(args["files"],
+                                   budgets=cfg.quality_budgets(),
+                                   disabled=cfg.quality_disabled())
+    errors = quality.error_count(findings)
+    return {
+        "errors": errors,
+        "warnings": len(findings) - errors,
+        "findings": [f.to_dict() for f in findings],
+    }
 
 
 def _digest(report: Dict[str, Any]) -> Dict[str, Any]:
@@ -138,11 +176,15 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         try:
             if name == "retrace_replay":
                 payload = _tool_replay(args)
+                is_error = payload["summary"]["divergence_count"] > 0
             elif name == "retrace_report":
                 payload = _tool_report(args)
+                is_error = payload["summary"]["divergence_count"] > 0
+            elif name == "retrace_quality":
+                payload = _tool_quality(args)
+                is_error = payload["errors"] > 0
             else:
                 return _error(request_id, -32602, "unknown tool: %s" % name)
-            is_error = payload["summary"]["divergence_count"] > 0
             return _result(request_id, {
                 "content": [{"type": "text",
                              "text": json.dumps(payload, ensure_ascii=True,

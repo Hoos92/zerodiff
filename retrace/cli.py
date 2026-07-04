@@ -70,6 +70,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_replay.add_argument("--timeout", type=float, default=30.0,
                           help="per-call timeout in seconds with --isolate "
                                "(default: 30)")
+    p_replay.add_argument("--in-order", action="store_true",
+                          help="replay traces in recorded chronological "
+                               "order (for code with module-level state)")
+    p_replay.add_argument("--jobs", type=int, default=1,
+                          help="replay in N parallel isolated workers "
+                               "(implies --isolate; incompatible with "
+                               "--in-order)")
     p_replay.add_argument("--json-out", default=report_mod.REPORT_JSON)
     p_replay.add_argument("--md-out", default=report_mod.REPORT_MD)
     p_replay.add_argument("--junit-out", default=None,
@@ -105,6 +112,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_loop.add_argument("--no-quality", action="store_true",
                         help="disable the security/quality gate on the "
                              "rewrite files (on by default)")
+    p_loop.add_argument("--agent-timeout", type=float, default=1800.0,
+                        help="kill the agent command after this many "
+                             "seconds (default: 1800)")
 
     p_quality = sub.add_parser(
         "quality", help="run the security/quality gate on source files "
@@ -146,6 +156,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_migrate.add_argument("--no-quality", action="store_true",
                            help="disable the security/quality gate on the "
                                 "rewrite files (on by default)")
+    p_migrate.add_argument("--agent-timeout", type=float, default=1800.0,
+                           help="kill the agent command after this many "
+                                "seconds (default: 1800)")
 
     sub.add_parser("init", help="scaffold retrace.toml and .gitignore "
                                 "entries in the current project")
@@ -157,9 +170,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                        "attestation of the last verification")
     p_attest.add_argument("-t", "--traces", default="traces")
     p_attest.add_argument("-r", "--report", default=report_mod.REPORT_JSON)
-    p_attest.add_argument("--key-file", required=True,
+    p_attest.add_argument("--key-file", default=None,
                           help="file containing the team signing key "
-                               "(>=16 bytes)")
+                               "(>=16 bytes; or set RETRACE_ATTEST_KEY)")
     p_attest.add_argument("--code", action="append", default=[],
                           metavar="FILE",
                           help="also pin a rewrite source file's digest "
@@ -170,7 +183,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "verify-attestation", help="(Enterprise) verify an attestation's "
                                    "signature and trace digests")
     p_vattest.add_argument("-i", "--input", default=None)
-    p_vattest.add_argument("--key-file", required=True)
+    p_vattest.add_argument("--key-file", default=None,
+                           help="signing key file (or RETRACE_ATTEST_KEY)")
     p_vattest.add_argument("-t", "--traces", default=None,
                            help="also check trace files still match the "
                                 "attested digests")
@@ -230,7 +244,8 @@ def _cmd_loop(args: argparse.Namespace) -> int:
     remaining = run_loop(args.traces, mappings, cfg, args.agent,
                          max_iters=args.max_iters,
                          timeout=args.timeout, workdir=cwd,
-                         quality_gate=not args.no_quality)
+                         quality_gate=not args.no_quality,
+                         agent_timeout=args.agent_timeout)
     if remaining == 0:
         print("retrace loop: all recorded behaviors match")
         return EXIT_MATCHED
@@ -324,8 +339,13 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     mappings = cfg.mappings()
     mappings.update(_parse_map_args(args.map))
 
+    if args.jobs > 1 and args.in_order:
+        raise ValueError("--jobs and --in-order are incompatible: "
+                         "parallel shards cannot preserve global order")
     result = replay_all(args.traces, mappings, cfg,
-                        isolate=args.isolate, timeout=args.timeout)
+                        isolate=args.isolate or args.jobs > 1,
+                        timeout=args.timeout, in_order=args.in_order,
+                        jobs=args.jobs)
     _warn_if_unmapped(result, mappings)
     report = report_mod.build_report(result.to_dict(), args.traces, mappings)
     report_mod.write_reports(report, args.json_out, args.md_out)

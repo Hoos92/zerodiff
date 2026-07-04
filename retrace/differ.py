@@ -148,6 +148,17 @@ def diff_output(expected: Dict[str, Any], actual: Dict[str, Any],
     return ctx.finish()
 
 
+def diff_trees(expected: Any, actual: Any, path: str, boundary: str,
+               trace_id: str, input_preview: str,
+               float_tolerance: float = 0.0
+               ) -> Tuple[List[Divergence], int]:
+    """Compare two already-scrubbed encoded trees (used for argument
+    mutations and other non-output comparisons)."""
+    ctx = _Ctx(boundary, trace_id, input_preview, float_tolerance)
+    _diff_tree(expected, actual, path, ctx)
+    return ctx.finish()
+
+
 class _Ctx:
     def __init__(self, boundary: str, trace_id: str, input_preview: str,
                  float_tolerance: float) -> None:

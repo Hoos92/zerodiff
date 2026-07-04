@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.8.0 — 2026-07-04 (architecture review)
+
+- **argument mutation is now verified behavior**: recording captures the
+  after-state of any argument the original modified in place; a rewrite
+  that returns the right value but doesn't mutate identically diverges at
+  `mutation.args[N]`. This also fixes a latent recorder bug where inputs
+  were encoded *after* the call (a mutating original recorded its mutated
+  inputs as the inputs). Opt out with `[record] mutations = false`
+- **stateful code support**: `meta.seq` global chronology on every trace;
+  `retrace replay --in-order` replays every call (no dedup) in recorded
+  order
+- **agent-loop economics**: stall detection (identical problems two
+  iterations running → stop early), `--agent-timeout` (default 1800s),
+  and prompts now name the rewrite files and the attempt number
+- **parallel replay**: `--jobs N` shards across isolated workers
+  (verified identical counts to serial on 10k behaviors)
+- **coherence**: MCP server gained `retrace_quality`; attestations with
+  `--code` now embed the quality-gate outcome in the signed body and
+  accept `RETRACE_ATTEST_KEY`; reports flag Python-version drift between
+  record and replay
+- robustness: markdown reports cap at 100 divergences; unreadable files
+  become gate findings; `retrace init` template includes `[quality]`
+
 ## 0.7.0 — 2026-07-04
 
 - security/quality gate (docs/SAFE_CODING.md): zero-dependency AST

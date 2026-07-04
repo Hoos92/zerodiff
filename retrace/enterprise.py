@@ -37,9 +37,16 @@ def _sha256_file(path: str) -> str:
     return digest.hexdigest()
 
 
-def _load_key(key_file: str) -> bytes:
-    with open(key_file, "rb") as f:
-        key = f.read().strip()
+def _load_key(key_file: Optional[str]) -> bytes:
+    if key_file:
+        with open(key_file, "rb") as f:
+            key = f.read().strip()
+    else:
+        key = os.environ.get("RETRACE_ATTEST_KEY", "").strip().encode(
+            "utf-8")
+        if not key:
+            raise ValueError("no signing key: pass --key-file or set "
+                             "RETRACE_ATTEST_KEY")
     if len(key) < 16:
         raise ValueError("attestation key must be at least 16 bytes")
     return key
@@ -94,6 +101,17 @@ def build_attestation(trace_dir: str, report_path: str, key_file: str,
     if code_paths:
         body["code"] = {path: _sha256_file(path)
                         for path in sorted(code_paths)}
+        # signed evidence should speak to security too: run the quality
+        # gate over the attested code and embed the outcome
+        from . import __version__, quality
+
+        findings = quality.check_files(sorted(code_paths))
+        errors = quality.error_count(findings)
+        body["quality"] = {
+            "errors": errors,
+            "warnings": len(findings) - errors,
+            "ruleset": "retrace-" + __version__,
+        }
     commit = _git_commit()
     if commit:
         body["git_commit"] = commit

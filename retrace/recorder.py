@@ -14,14 +14,17 @@ function's return value or exception always passes through untouched.
 import datetime
 import functools
 import importlib
+import itertools
 import os
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 from . import serializer, store
 
 _ENV_VAR = "RETRACE_TRACE_DIR"
 _ENV_CONFIG = "RETRACE_CONFIG"
+
+_seq = itertools.count()  # global chronology across all boundaries
 
 _active_dir = None  # type: Optional[str]
 _dropped = 0  # traces lost to recorder-internal errors (never raised)
@@ -75,16 +78,37 @@ def _boundary_target(fn: Callable) -> str:
     return "{}.{}".format(module, qualname)
 
 
-def _write_trace(target: str, trace_dir: str, args: tuple, kwargs: dict,
-                 output: dict, duration_ms: float) -> None:
+def _encode_input(target: str, args: tuple, kwargs: dict) -> Dict:
+    return {
+        "args": [_redact(serializer.encode(a), target, "input")
+                 for a in args],
+        "kwargs": {k: _redact(serializer.encode(v), target, "input")
+                   for k, v in kwargs.items()},
+    }
+
+
+def compute_mutations(encoded_before: Dict, args: tuple, kwargs: dict,
+                      target: str = "") -> Dict[str, Any]:
+    """Re-encode arguments after the call and return the encoded
+    after-state of every argument the call modified in place."""
+    after = _encode_input(target, args, kwargs)
+    mutations = {}
+    for i, tree in enumerate(after["args"]):
+        if serializer.canonical_json(tree) != serializer.canonical_json(
+                encoded_before["args"][i]):
+            mutations[str(i)] = tree
+    for key, tree in after["kwargs"].items():
+        if serializer.canonical_json(tree) != serializer.canonical_json(
+                encoded_before["kwargs"][key]):
+            mutations["kw:" + key] = tree
+    return mutations
+
+
+def _write_trace(target: str, trace_dir: str, encoded_input: Dict,
+                 output: dict, duration_ms: float,
+                 mutations: Optional[Dict] = None) -> None:
     global _dropped
     try:
-        encoded_input = {
-            "args": [_redact(serializer.encode(a), target, "input")
-                     for a in args],
-            "kwargs": {k: _redact(serializer.encode(v), target, "input")
-                       for k, v in kwargs.items()},
-        }
         if output.get("type") == "return":
             output = {"type": "return",
                       "value": _redact(output.get("value"), target,
@@ -97,11 +121,17 @@ def _write_trace(target: str, trace_dir: str, args: tuple, kwargs: dict,
             "output": output,
             "meta": {
                 "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "seq": next(_seq),
                 "duration_ms": round(duration_ms, 3),
                 "py": "{}.{}.{}".format(*__import__("sys").version_info[:3]),
                 "retrace": _version(),
             },
         }
+        if mutations is not None:
+            # empty dict means "captured, nothing mutated"; absent means
+            # "not captured (old trace or opt-out)" -- replay only checks
+            # mutations when the field is present
+            trace["mutations"] = mutations
         store.append_trace(trace_dir, trace)
     except Exception:
         _dropped += 1
@@ -123,27 +153,47 @@ def record(fn: Callable) -> Callable:
             return fn(*args, **kwargs)
 
         target = _boundary_target(fn)
+        # encode BEFORE the call so in-place argument mutation is visible;
+        # recording must never break the host, so failures degrade to
+        # "trace dropped", never to an exception in the host's call
+        encoded_input = None
+        capture_mutations = False
+        try:
+            encoded_input = _encode_input(target, args, kwargs)
+            capture_mutations = _get_config().record_mutations()
+        except Exception:
+            pass
+
+        def finish(output, duration):
+            global _dropped
+            if encoded_input is None:
+                _dropped += 1
+                return
+            mutations = None
+            if capture_mutations:
+                try:
+                    mutations = compute_mutations(encoded_input, args,
+                                                  kwargs, target)
+                except Exception:
+                    mutations = None
+            _write_trace(target, trace_dir, encoded_input, output,
+                         duration, mutations)
+
         start = time.perf_counter()
         try:
             result = fn(*args, **kwargs)
         except BaseException as exc:
             duration = (time.perf_counter() - start) * 1000
-            output = {
-                "type": "exception",
-                "exception": {
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                },
-            }
-            _write_trace(target, trace_dir, args, kwargs, output, duration)
+            finish({"type": "exception",
+                    "exception": {"type": type(exc).__name__,
+                                  "message": str(exc)}}, duration)
             raise
         duration = (time.perf_counter() - start) * 1000
         try:
             encoded_value = serializer.encode(result)
         except Exception:
             encoded_value = serializer._opaque(result)
-        output = {"type": "return", "value": encoded_value}
-        _write_trace(target, trace_dir, args, kwargs, output, duration)
+        finish({"type": "return", "value": encoded_value}, duration)
         return result
 
     wrapper.__retrace_wrapped__ = fn

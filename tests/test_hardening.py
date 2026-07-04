@@ -40,6 +40,7 @@ def test_replay_without_mapping_warns(hard_dir, capsys):
 def test_replay_with_mapping_does_not_warn(hard_dir, capsys):
     (hard_dir / "hardnew_a.py").write_text(
         "def f(x):\n    return 1 + x\n", encoding="utf-8")
+    importlib.invalidate_caches()  # finder cache may miss the new file
     code = cli.main(["replay", "-t", "traces", "--map",
                      "hardleg_a:hardnew_a"])
     assert code == 0

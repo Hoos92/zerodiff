@@ -63,10 +63,17 @@ PROMPT_ENTRY = """\
 """
 
 
-def build_prompt(report: Dict, quality_findings=None) -> str:
+def build_prompt(report: Dict, quality_findings=None, files=None,
+                 iteration=None, max_iters=None) -> str:
     divergences = report["divergences"]
     shown = divergences[:MAX_PROMPT_DIVERGENCES]
     lines = [PROMPT_HEADER.format(count=len(shown), total=len(divergences))]
+    if iteration is not None and max_iters is not None:
+        lines.insert(0, "This is fix attempt %d of %d.\n"
+                     % (iteration, max_iters))
+    if files:
+        lines.insert(0, "The rewrite source files to fix: %s\n"
+                     % ", ".join(files))
     for i, d in enumerate(shown, 1):
         lines.append(PROMPT_ENTRY.format(
             index=i, kind=d["kind"], boundary=d["boundary"], path=d["path"],
@@ -105,17 +112,35 @@ def rewrite_files(mappings: Dict[str, str], workdir: str):
     return paths
 
 
-def run_agent(agent_cmd: str, prompt: str, workdir: str) -> int:
+AGENT_TIMED_OUT = -9999
+
+
+def run_agent(agent_cmd: str, prompt: str, workdir: str,
+              agent_timeout: float = 1800.0) -> int:
     prompt_file = os.path.join(workdir, "retrace-fix-prompt.md")
     with open(prompt_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(prompt)
-    if "{prompt_file}" in agent_cmd:
-        cmd = agent_cmd.replace("{prompt_file}", prompt_file)
-        proc = subprocess.run(cmd, shell=True, cwd=workdir)
-    else:
-        proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,
-                              input=prompt.encode("utf-8"))
+    try:
+        if "{prompt_file}" in agent_cmd:
+            cmd = agent_cmd.replace("{prompt_file}", prompt_file)
+            proc = subprocess.run(cmd, shell=True, cwd=workdir,
+                                  timeout=agent_timeout)
+        else:
+            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,
+                                  input=prompt.encode("utf-8"),
+                                  timeout=agent_timeout)
+    except subprocess.TimeoutExpired:
+        return AGENT_TIMED_OUT
     return proc.returncode
+
+
+def _fingerprint(report: Dict, blocking_quality: int) -> str:
+    import hashlib
+
+    entries = sorted("%s|%s|%s" % (d["trace_id"], d["path"], d["kind"])
+                     for d in report["divergences"])
+    payload = "\n".join(entries) + "\n#quality=%d" % blocking_quality
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
@@ -123,7 +148,8 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
              timeout: float = 30.0, workdir: str = ".",
              json_out: str = report_mod.REPORT_JSON,
              md_out: str = report_mod.REPORT_MD,
-             quality_gate: bool = True) -> int:
+             quality_gate: bool = True,
+             agent_timeout: float = 1800.0) -> int:
     """Returns the number of blocking problems remaining (0 = success):
     behavioral divergences plus, with the quality gate on (default),
     error-severity security/quality findings in the rewrite files.
@@ -134,6 +160,7 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
     from . import quality as quality_mod
 
     remaining = 0
+    previous_fingerprint = None
     for iteration in range(1, max_iters + 1):
         result = replay_all(trace_dir, mappings, cfg, isolate=True,
                             timeout=timeout)
@@ -142,11 +169,11 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         report_mod.write_reports(report, json_out, md_out)
         divergences = report["summary"]["divergence_count"]
 
+        files = rewrite_files(mappings, workdir)
         findings = []
         if quality_gate:
             findings = quality_mod.check_files(
-                rewrite_files(mappings, workdir),
-                budgets=cfg.quality_budgets(),
+                files, budgets=cfg.quality_budgets(),
                 disabled=cfg.quality_disabled())
         blocking = quality_mod.error_count(findings)
         remaining = divergences + blocking
@@ -160,10 +187,28 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
                 print("retrace loop: quality warnings (non-blocking):")
                 print(quality_mod.render_text(findings))
             return 0
+
+        fingerprint = _fingerprint(report, blocking)
+        if fingerprint == previous_fingerprint:
+            print("retrace loop: agent made no progress (identical "
+                  "problems two iterations in a row); stopping early "
+                  "after %d iterations to avoid burning agent spend"
+                  % iteration)
+            break
+        previous_fingerprint = fingerprint
+
         if iteration == max_iters:
             break
         print("retrace loop: invoking agent...")
-        code = run_agent(agent_cmd, build_prompt(report, findings), workdir)
+        code = run_agent(
+            agent_cmd,
+            build_prompt(report, findings, files=files,
+                         iteration=iteration, max_iters=max_iters),
+            workdir, agent_timeout=agent_timeout)
+        if code == AGENT_TIMED_OUT:
+            print("retrace loop: agent timed out after %ds; stopping"
+                  % agent_timeout)
+            break
         if code != 0:
             print("retrace loop: warning: agent exited with code %d" % code)
     return remaining

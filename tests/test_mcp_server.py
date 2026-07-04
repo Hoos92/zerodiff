@@ -63,7 +63,8 @@ def test_initialize_and_list_tools(mcp_dir):
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     assert responses[0]["result"]["serverInfo"]["name"] == "retrace"
     tool_names = {t["name"] for t in responses[1]["result"]["tools"]}
-    assert tool_names == {"retrace_replay", "retrace_report"}
+    assert tool_names == {"retrace_replay", "retrace_report",
+                          "retrace_quality"}
 
 
 def test_replay_tool_matching_rewrite(mcp_dir):

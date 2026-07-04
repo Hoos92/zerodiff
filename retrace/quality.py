@@ -280,8 +280,17 @@ def check_files(paths: List[str], budgets: Optional[Dict[str, int]] = None,
                 disabled: Optional[List[str]] = None) -> List[Finding]:
     findings = []
     for path in paths:
-        with open(path, "r", encoding="utf-8") as f:
-            findings.extend(check_source(f.read(), path, budgets, disabled))
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                source = f.read()
+        except (OSError, UnicodeDecodeError) as exc:
+            findings.append(Finding(
+                "unreadable", "error", path, 0,
+                "cannot read file: %s" % exc,
+                "the gate cannot vouch for code it cannot read; fix the "
+                "path or encoding."))
+            continue
+        findings.extend(check_source(source, path, budgets, disabled))
     return findings
 
 
