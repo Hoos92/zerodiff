@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.10.2 — 2026-07-05 (cold-clone audit)
+
+- packaging version is now single-sourced from `retrace.__version__`
+  (pip metadata had been stuck at 0.1.0 since the first release)
+- README documents `retrace insights`; changelog backfilled for 0.10.1
+- audit verified from a fresh GitHub clone: 168 tests, demo, pricing
+  example (good + buggy + insights), stdnum committed rewrites 269/269,
+  attest/verify/history, MCP tools/list — all green with zero setup
+  beyond `pip install -e .`
+
+## 0.10.1 — 2026-07-05 (hard live cohort)
+
+- loop stall detection catches A-B-A-B oscillation (fingerprint memory),
+  found live when validators cycled 14<->23 under gpt-4o
+- `replay_all` guards in_order+jobs at the API level
+- hard cohort documented in VALIDATION.md: chevron 23/77 (then
+  regression to 0), validators oscillation, dotenv 12/19 -- 148
+  would-have-shipped divergences held at the gate
+
 ## 0.10.0 — 2026-07-05 (self-improvement loops + live cohort)
 
 - `retrace insights`: mines your report and history locally into

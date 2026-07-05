@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "retrace-harness"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Behavioral equivalence harness: record what your legacy code really does, replay it against an AI rewrite, and get every divergence as an actionable report."
 readme = "README.md"
 license = { text = "MIT" }
@@ -32,3 +32,6 @@ Homepage = "https://github.com/Hoos92/retrace"
 
 [tool.setuptools]
 packages = ["retrace"]
+
+[tool.setuptools.dynamic]
+version = { attr = "retrace.__version__" }

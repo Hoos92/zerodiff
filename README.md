@@ -90,6 +90,7 @@ retrace migrate ... --llm openai-compatible:llama3.3 \
     --llm-base-url http://localhost:11434/v1              # Ollama/OpenRouter/vLLM
 
 retrace llm-check --llm anthropic:claude-sonnet-5   # validate key+model in 2s
+retrace insights    # mine your report + history for concrete next actions
 ```
 
 The built-in agent is deliberately *minimal and least-privilege*: no
