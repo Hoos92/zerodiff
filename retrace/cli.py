@@ -220,17 +220,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         "guard", help="dependency-upgrade safety net: 'baseline' before "
                       "you upgrade, 'check' after -- proves the upgrade "
                       "changed nothing you recorded")
-    p_guard.add_argument("stage", choices=["baseline", "check"])
-    p_guard.add_argument("-t", "--traces", default=".retrace/guard",
-                         help="baseline trace directory")
-    p_guard.add_argument("--include", action="append", default=[],
-                         metavar="PATTERN",
-                         help="(baseline) modules to record, zero-edit")
-    p_guard.add_argument("--config", default=None)
-    p_guard.add_argument("--isolate", action="store_true")
-    p_guard.add_argument("--timeout", type=float, default=30.0)
-    p_guard.add_argument("cmd", nargs=argparse.REMAINDER,
-                         help="(baseline) driver command: -- python x.py")
+    guard_sub = p_guard.add_subparsers(dest="stage", required=True)
+    pg_base = guard_sub.add_parser("baseline",
+                                   help="record current behavior")
+    pg_base.add_argument("-t", "--traces", default=".retrace/guard")
+    pg_base.add_argument("--include", action="append", default=[],
+                         metavar="PATTERN")
+    pg_base.add_argument("--config", default=None)
+    pg_base.add_argument("cmd", nargs=argparse.REMAINDER,
+                         help="driver command: -- python x.py")
+    pg_check = guard_sub.add_parser("check",
+                                    help="replay after the upgrade")
+    pg_check.add_argument("-t", "--traces", default=".retrace/guard")
+    pg_check.add_argument("--config", default=None)
+    pg_check.add_argument("--isolate", action="store_true")
+    pg_check.add_argument("--timeout", type=float, default=30.0)
 
     p_llmcheck = sub.add_parser(
         "llm-check", help="validate an --llm key/model/endpoint with one "
