@@ -15,6 +15,18 @@ REPORT_MD = "retrace-report.md"
 
 def build_report(result_dict: Dict[str, Any], trace_dir: str,
                  mappings: Dict[str, str]) -> Dict[str, Any]:
+    summary = result_dict["summary"]
+    boundaries = summary.get("boundaries", {})
+    exception_behaviors = sum(b.get("recorded_exceptions", 0)
+                              for b in boundaries.values())
+    summary["coverage"] = {
+        "boundaries": len(boundaries),
+        "behaviors": summary.get("replayed", 0),
+        "exception_behaviors": exception_behaviors,
+        "exception_share": round(
+            exception_behaviors / summary["replayed"], 3)
+        if summary.get("replayed") else 0.0,
+    }
     return {
         "retrace_report": 1,
         "generated_at": datetime.datetime.now(
@@ -68,6 +80,15 @@ def render_markdown(report: Dict[str, Any]) -> str:
                  .format(s["weak_matches"]))
     lines.append("")
     lines.append("Coverage note: {}".format(report["note"]))
+    coverage = s.get("coverage")
+    if coverage:
+        lines.append("")
+        lines.append("Coverage confidence: {} boundaries, {} distinct "
+                     "recorded behaviors, {} exception-path behaviors "
+                     "({:.0%}).".format(
+                         coverage["boundaries"], coverage["behaviors"],
+                         coverage["exception_behaviors"],
+                         coverage["exception_share"]))
     lines.append("")
     if s.get("python_version_mismatch"):
         lines.append("> **Environment note:** traces were recorded on "

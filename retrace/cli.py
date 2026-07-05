@@ -213,6 +213,24 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "machine)")
     p_insights.add_argument("-i", "--input",
                             default=report_mod.REPORT_JSON)
+    p_insights.add_argument("--json", action="store_true",
+                            help="machine-readable output")
+
+    p_guard = sub.add_parser(
+        "guard", help="dependency-upgrade safety net: 'baseline' before "
+                      "you upgrade, 'check' after -- proves the upgrade "
+                      "changed nothing you recorded")
+    p_guard.add_argument("stage", choices=["baseline", "check"])
+    p_guard.add_argument("-t", "--traces", default=".retrace/guard",
+                         help="baseline trace directory")
+    p_guard.add_argument("--include", action="append", default=[],
+                         metavar="PATTERN",
+                         help="(baseline) modules to record, zero-edit")
+    p_guard.add_argument("--config", default=None)
+    p_guard.add_argument("--isolate", action="store_true")
+    p_guard.add_argument("--timeout", type=float, default=30.0)
+    p_guard.add_argument("cmd", nargs=argparse.REMAINDER,
+                         help="(baseline) driver command: -- python x.py")
 
     p_llmcheck = sub.add_parser(
         "llm-check", help="validate an --llm key/model/endpoint with one "
@@ -259,7 +277,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             return _cmd_llm_check(args)
         if args.command == "insights":
             from .insights import cmd_insights
-            return cmd_insights(args.input)
+            return cmd_insights(args.input, as_json=args.json)
+        if args.command == "guard":
+            return _cmd_guard(args)
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
         print("retrace: error: {}".format(exc), file=sys.stderr)
@@ -453,6 +473,35 @@ def _print_divergence_digest(report: Dict, limit: int = 5) -> None:
     remaining = len(report["divergences"]) - limit
     if remaining > 0:
         print("  ... and {} more (see report)".format(remaining))
+
+
+def _cmd_guard(args: argparse.Namespace) -> int:
+    """The recurring product: prove an upgrade preserved recorded
+    behavior. Boundaries replay against their ORIGINAL names on purpose
+    -- the upgraded package now lives behind them."""
+    if args.stage == "baseline":
+        args.out = args.traces
+        return _cmd_record(args)
+
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+    cfg = load_config(args.config)
+    result = replay_all(args.traces, {}, cfg, isolate=args.isolate,
+                        timeout=args.timeout)
+    report = report_mod.build_report(result.to_dict(), args.traces, {})
+    report_mod.write_reports(report)
+    s = report["summary"]
+    if s["divergence_count"] == 0:
+        print("retrace guard: PASS -- %d of %d recorded behaviors "
+              "preserved across the change" % (s["matched"],
+                                               s["replayed"]))
+        return EXIT_MATCHED
+    print("retrace guard: BEHAVIOR CHANGED -- %d of %d recorded "
+          "behaviors diverged (see retrace-report.md)"
+          % (s["diverged"], s["replayed"]))
+    _print_divergence_digest(report)
+    return EXIT_DIVERGED
 
 
 def _cmd_llm_check(args: argparse.Namespace) -> int:

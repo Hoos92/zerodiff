@@ -91,6 +91,11 @@ retrace migrate ... --llm openai-compatible:llama3.3 \
 
 retrace llm-check --llm anthropic:claude-sonnet-5   # validate key+model in 2s
 retrace insights    # mine your report + history for concrete next actions
+
+# the upgrade safety net: prove a dependency bump changed nothing
+retrace guard baseline --include yourpkg -- python driver.py
+pip install -U somedependency
+retrace guard check
 ```
 
 The built-in agent is deliberately *minimal and least-privilege*: no

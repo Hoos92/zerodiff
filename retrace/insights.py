@@ -71,6 +71,14 @@ def generate(report: Dict[str, Any],
             "paths in the report." % len(mutations))
 
     boundaries = summary.get("boundaries", {})
+    no_error_paths = [b for b, s in boundaries.items()
+                      if s.get("replayed", 0) >= 5
+                      and s.get("recorded_exceptions", 0) == 0][:3]
+    if no_error_paths:
+        suggestions.append(
+            "No exception-path behaviors recorded for: %s. Drive invalid "
+            "inputs in your scenario script -- error behavior is the part "
+            "rewrites break most." % ", ".join(no_error_paths))
     hot = sorted(((b, s["diverged"]) for b, s in boundaries.items()
                   if s.get("diverged")), key=lambda x: -x[1])[:3]
     if hot:
@@ -103,7 +111,8 @@ def generate(report: Dict[str, Any],
     return suggestions
 
 
-def cmd_insights(report_path: str, history_dir: str = ".") -> int:
+def cmd_insights(report_path: str, history_dir: str = ".",
+                 as_json: bool = False) -> int:
     try:
         with open(report_path, "r", encoding="utf-8") as f:
             report = json.load(f)
@@ -117,9 +126,14 @@ def cmd_insights(report_path: str, history_dir: str = ".") -> int:
         with open(history_path, "r", encoding="utf-8") as f:
             history = [json.loads(line) for line in f if line.strip()]
 
+    suggestions = generate(report, history)
+    if as_json:
+        print(json.dumps({"verdict": report.get("verdict"),
+                          "suggestions": suggestions}, indent=2))
+        return 0
     print("retrace insights (%s: %d/%d matched):"
           % (report.get("verdict"), report["summary"]["matched"],
              report["summary"]["replayed"]))
-    for index, suggestion in enumerate(generate(report, history), 1):
+    for index, suggestion in enumerate(suggestions, 1):
         print("  %d. %s" % (index, suggestion))
     return 0

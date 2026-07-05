@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.0 — 2026-07-05 (guard, coverage confidence, class ergonomics)
+
+- `retrace guard baseline` / `retrace guard check`: the dependency-
+  upgrade safety net -- record before upgrading, replay after; identity
+  mapping on purpose (the upgraded package lives behind the same names)
+- coverage confidence in every report: boundaries, distinct behaviors,
+  exception-path share; insights flags boundaries recorded with zero
+  error paths
+- class ergonomics: dataclass and Enum values now RECONSTRUCT at replay
+  when their class is importable (methods taking/returning dataclasses
+  become fully replayable); `retrace.record_class()` instruments a
+  class's public/static/class methods; `wrap()` accepts "Class.method"
+- `retrace insights --json`; examples/ index README
+
 ## 0.10.2 — 2026-07-05 (cold-clone audit)
 
 - packaging version is now single-sourced from `retrace.__version__`

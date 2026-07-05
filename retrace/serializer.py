@@ -181,12 +181,29 @@ def decode(tree: Any) -> Any:
             raise OpaqueValueError(tree["__opaque__"].get("type", "unknown"))
         if "__cycle__" in tree:
             raise OpaqueValueError("cyclic structure")
-        if "__adapted__" in tree or "__enum__" in tree or "__dataclass__" in tree:
-            # cannot faithfully reconstruct the original class instance
-            raise OpaqueValueError(
-                (tree.get("__adapted__") or tree.get("__enum__")
-                 or tree.get("__dataclass__")).get("type", "unknown")
-            )
+        if "__adapted__" in tree:
+            raise OpaqueValueError(tree["__adapted__"].get("type",
+                                                           "unknown"))
+        if "__enum__" in tree:
+            info = tree["__enum__"]
+            cls = _import_type(info.get("type", ""))
+            if cls is not None and isinstance(cls, type) and \
+                    issubclass(cls, enum.Enum):
+                try:
+                    return cls[info["name"]]
+                except KeyError:
+                    pass
+            raise OpaqueValueError(info.get("type", "unknown"))
+        if "__dataclass__" in tree:
+            info = tree["__dataclass__"]
+            cls = _import_type(info.get("type", ""))
+            if cls is not None and dataclasses.is_dataclass(cls):
+                try:
+                    return cls(**{k: decode(v)
+                                  for k, v in info["fields"].items()})
+                except Exception:
+                    raise OpaqueValueError(info.get("type", "unknown"))
+            raise OpaqueValueError(info.get("type", "unknown"))
         if "__float__" in tree:
             return float(tree["__float__"])
         if "__tuple__" in tree:
@@ -209,6 +226,25 @@ def decode(tree: Any) -> Any:
             return decimal.Decimal(tree["__decimal__"])
         return {k: decode(v) for k, v in tree.items()}
     raise OpaqueValueError("unknown node type: {}".format(type(tree).__name__))
+
+
+def _import_type(dotted: str):
+    """Best-effort import of 'pkg.mod.Qualname' for decode reconstruction."""
+    import importlib
+
+    parts = dotted.split(".")
+    for split in range(len(parts) - 1, 0, -1):
+        try:
+            obj = importlib.import_module(".".join(parts[:split]))
+        except Exception:
+            continue
+        try:
+            for attr in parts[split:]:
+                obj = getattr(obj, attr)
+            return obj
+        except AttributeError:
+            return None
+    return None
 
 
 def contains_opaque(tree: Any) -> bool:

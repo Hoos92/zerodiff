@@ -200,6 +200,33 @@ def record(fn: Callable) -> Callable:
     return wrapper
 
 
+def record_class(module_name: str, class_name: str,
+                 methods: Optional[list] = None) -> int:
+    """Instrument the public methods of a class (including static and
+    class methods). Instance methods replay when `self` is
+    reconstructible -- dataclasses reconstruct automatically; other
+    types need a registered adapter. Returns the number wrapped."""
+    module = importlib.import_module(module_name)
+    cls = getattr(module, class_name)
+    wrapped = 0
+    for name, attr in list(vars(cls).items()):
+        if name.startswith("_") or (methods is not None
+                                    and name not in methods):
+            continue
+        if isinstance(attr, staticmethod):
+            setattr(cls, name, staticmethod(record(attr.__func__)))
+        elif isinstance(attr, classmethod):
+            setattr(cls, name, classmethod(record(attr.__func__)))
+        elif callable(attr):
+            if getattr(attr, "__retrace_wrapped__", None) is not None:
+                continue
+            setattr(cls, name, record(attr))
+        else:
+            continue
+        wrapped += 1
+    return wrapped
+
+
 def wrap(module_name: str, function_name: str) -> Callable:
     """Instrument ``module.function`` without editing its source.
 
@@ -209,9 +236,13 @@ def wrap(module_name: str, function_name: str) -> Callable:
     (``from mod import fn``) before ``wrap()`` ran keeps the raw reference.
     """
     module = importlib.import_module(module_name)
-    original = getattr(module, function_name)
+    owner = module
+    parts = function_name.split(".")  # supports "Class.method"
+    for part in parts[:-1]:
+        owner = getattr(owner, part)
+    original = getattr(owner, parts[-1])
     if getattr(original, "__retrace_wrapped__", None) is not None:
         return original
     wrapped = record(original)
-    setattr(module, function_name, wrapped)
+    setattr(owner, parts[-1], wrapped)
     return wrapped
