@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.0 — 2026-07-05 (built-in agent)
+
+- two doors into the loop: `--agent "<cli>"` (BYO, unchanged) or
+  `--llm provider:model` — a built-in minimal agent calling your chosen
+  LLM directly (anthropic / openai / openai-compatible with
+  `--llm-base-url` for Ollama, OpenRouter, vLLM, Gemini-compat); zero
+  dependencies (stdlib urllib), keys from standard env vars, `[agent]`
+  config in retrace.toml
+- the built-in agent is least-privilege by design: no shell, no tools,
+  output protocol is full-file sentinel blocks, writes restricted to the
+  allowlisted rewrite files (path traversal rejected), and everything it
+  writes still passes the quality gate and replay
+- `retrace llm-check`: validate key/model/endpoint with one tiny
+  round-trip before burning a real run
+- 161 tests (stub LLM server, no network in CI)
+
 ## 0.8.0 — 2026-07-04 (architecture review)
 
 - **argument mutation is now verified behavior**: recording captures the

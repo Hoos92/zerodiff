@@ -76,7 +76,26 @@ retrace replay -t traces --isolate --timeout 10
 
 ## Agent-native workflows
 
-Retrace is vendor-neutral: it verifies code, not agents.
+Retrace is vendor-neutral: it verifies code, not agents. Two doors into
+the same loop — **bring your own agent CLI, or just bring an API key**:
+
+```bash
+# door 1: BYO agent (Claude Code, Codex, Cursor CLI, your own script)
+retrace migrate ... --agent "claude -p --permission-mode acceptEdits"
+
+# door 2: built-in agent -- you pick the LLM, Retrace does the rest
+retrace migrate ... --llm anthropic:claude-sonnet-5      # ANTHROPIC_API_KEY
+retrace migrate ... --llm openai:gpt-5                    # OPENAI_API_KEY
+retrace migrate ... --llm openai-compatible:llama3.3 \
+    --llm-base-url http://localhost:11434/v1              # Ollama/OpenRouter/vLLM
+
+retrace llm-check --llm anthropic:claude-sonnet-5   # validate key+model in 2s
+```
+
+The built-in agent is deliberately *minimal and least-privilege*: no
+shell, no tools, writes restricted to the mapped rewrite files, and its
+output still passes the quality gate and replay like anyone else's code.
+Retrace itself still contains no model — the verifier stays deterministic.
 
 ```bash
 # the whole verified migration in one command: record the legacy code,

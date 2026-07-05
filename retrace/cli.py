@@ -96,11 +96,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         "loop", help="replay, feed divergences to a coding agent, repeat "
                      "until every recorded behavior matches")
     p_loop.add_argument("-t", "--traces", default="traces")
-    p_loop.add_argument("--agent", required=True,
-                        help="agent command; gets the fix prompt on stdin, "
-                             "or use a {prompt_file} placeholder. e.g. "
-                             "--agent \"claude -p --permission-mode "
+    p_loop.add_argument("--agent", default=None,
+                        help="BYO agent command; gets the fix prompt on "
+                             "stdin, or use a {prompt_file} placeholder. "
+                             "e.g. --agent \"claude -p --permission-mode "
                              "acceptEdits\"")
+    p_loop.add_argument("--llm", default=None, metavar="PROVIDER:MODEL",
+                        help="use the built-in agent with your LLM: "
+                             "anthropic:MODEL, openai:MODEL, or "
+                             "openai-compatible:MODEL (with "
+                             "--llm-base-url). Alternative to --agent.")
+    p_loop.add_argument("--llm-base-url", default=None,
+                        help="endpoint for openai-compatible (Ollama, "
+                             "OpenRouter, vLLM, Gemini-compat)")
     p_loop.add_argument("--max-iters", type=int, default=5)
     p_loop.add_argument("--map", action="append", default=[],
                         metavar="OLD:NEW")
@@ -139,9 +147,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_migrate.add_argument("--map", action="append", default=[],
                            metavar="OLD:NEW", help="old:new module mapping "
                            "(repeatable; merged with retrace.toml [map])")
-    p_migrate.add_argument("--agent", required=True,
-                           help="agent CLI that writes/fixes the rewrite; "
-                                "prompt via stdin or {prompt_file}")
+    p_migrate.add_argument("--agent", default=None,
+                           help="BYO agent CLI that writes/fixes the "
+                                "rewrite; prompt via stdin or "
+                                "{prompt_file}")
+    p_migrate.add_argument("--llm", default=None,
+                           metavar="PROVIDER:MODEL",
+                           help="use the built-in agent with your LLM "
+                                "(alternative to --agent)")
+    p_migrate.add_argument("--llm-base-url", default=None)
     p_migrate.add_argument("-t", "--traces", default="traces")
     p_migrate.add_argument("--skip-record", action="store_true",
                            help="reuse existing traces instead of "
@@ -193,6 +207,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         "history", help="(Enterprise) show verification results over time")
     p_history.add_argument("-n", "--limit", type=int, default=20)
 
+    p_llmcheck = sub.add_parser(
+        "llm-check", help="validate an --llm key/model/endpoint with one "
+                          "tiny round-trip before burning a real run")
+    p_llmcheck.add_argument("--llm", required=True,
+                            metavar="PROVIDER:MODEL")
+    p_llmcheck.add_argument("--llm-base-url", default=None)
+    p_llmcheck.add_argument("--config", default=None)
+
     args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
@@ -226,10 +248,39 @@ def main(argv: Optional[List[str]] = None) -> int:
             return show_history(limit=args.limit)
         if args.command == "quality":
             return _cmd_quality(args)
+        if args.command == "llm-check":
+            return _cmd_llm_check(args)
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
         print("retrace: error: {}".format(exc), file=sys.stderr)
         return EXIT_ERROR
+
+
+def make_runner(args: argparse.Namespace, cfg):
+    """Resolve the two doors: --agent (BYO CLI) or --llm (built-in).
+    Falls back to [agent] llm in retrace.toml when neither flag is given."""
+    from .loop import ShellAgent
+
+    llm_spec = getattr(args, "llm", None) or (
+        None if getattr(args, "agent", None) else cfg.agent_llm())
+    if getattr(args, "agent", None) and getattr(args, "llm", None):
+        raise ValueError("--agent and --llm are mutually exclusive; "
+                         "pick one door")
+    if args.agent:
+        return ShellAgent(args.agent, args.agent_timeout)
+    if llm_spec:
+        from .agent import BuiltinAgent
+
+        return BuiltinAgent(
+            llm_spec,
+            base_url=getattr(args, "llm_base_url", None)
+            or cfg.agent_base_url(),
+            max_tokens=cfg.agent_max_tokens(),
+            timeout=args.agent_timeout,
+            api_key_env=cfg.agent_api_key_env())
+    raise ValueError("no agent selected: pass --agent \"<cli command>\" "
+                     "or --llm provider:model (or set [agent] llm in "
+                     "retrace.toml)")
 
 
 def _cmd_loop(args: argparse.Namespace) -> int:
@@ -241,11 +292,12 @@ def _cmd_loop(args: argparse.Namespace) -> int:
     cfg = load_config(args.config)
     mappings = cfg.mappings()
     mappings.update(_parse_map_args(args.map))
-    remaining = run_loop(args.traces, mappings, cfg, args.agent,
+    remaining = run_loop(args.traces, mappings, cfg,
                          max_iters=args.max_iters,
                          timeout=args.timeout, workdir=cwd,
                          quality_gate=not args.no_quality,
-                         agent_timeout=args.agent_timeout)
+                         agent_timeout=args.agent_timeout,
+                         runner=make_runner(args, cfg))
     if remaining == 0:
         print("retrace loop: all recorded behaviors match")
         return EXIT_MATCHED
@@ -391,6 +443,25 @@ def _print_divergence_digest(report: Dict, limit: int = 5) -> None:
     remaining = len(report["divergences"]) - limit
     if remaining > 0:
         print("  ... and {} more (see report)".format(remaining))
+
+
+def _cmd_llm_check(args: argparse.Namespace) -> int:
+    from .agent import AgentError, BuiltinAgent
+
+    cfg = load_config(args.config)
+    try:
+        agent = BuiltinAgent(args.llm,
+                             base_url=args.llm_base_url
+                             or cfg.agent_base_url(),
+                             max_tokens=64, timeout=60,
+                             api_key_env=cfg.agent_api_key_env())
+        reply = agent.check()
+    except AgentError as exc:
+        print("retrace llm-check: FAILED: %s" % exc)
+        return EXIT_DIVERGED
+    print("retrace llm-check: OK -- %s responded (%r)"
+          % (args.llm, reply))
+    return EXIT_MATCHED
 
 
 def _cmd_quality(args: argparse.Namespace) -> int:

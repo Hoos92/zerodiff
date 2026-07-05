@@ -56,6 +56,23 @@ class Config:
             return True
         return bool(record.get("mutations", True))
 
+    # -- built-in agent ----------------------------------------------------
+    def _agent(self) -> Dict[str, Any]:
+        agent = self.data.get("agent", {})
+        return agent if isinstance(agent, dict) else {}
+
+    def agent_llm(self) -> Optional[str]:
+        return self._agent().get("llm")
+
+    def agent_base_url(self) -> Optional[str]:
+        return self._agent().get("base_url")
+
+    def agent_max_tokens(self) -> int:
+        return int(self._agent().get("max_tokens", 8000))
+
+    def agent_api_key_env(self) -> Optional[str]:
+        return self._agent().get("api_key_env")
+
     # -- quality gate ------------------------------------------------------
     def quality_budgets(self) -> Dict[str, int]:
         quality = self.data.get("quality", {})

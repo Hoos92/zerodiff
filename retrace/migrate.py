@@ -103,8 +103,14 @@ def cmd_migrate(args) -> int:
 
     cfg = load_config(args.config)
     mappings = cfg.mappings()
-    from .cli import EXIT_DIVERGED, EXIT_ERROR, EXIT_MATCHED, _parse_map_args
+    from .cli import (EXIT_DIVERGED, EXIT_ERROR, EXIT_MATCHED,
+                      _parse_map_args, make_runner)
     mappings.update(_parse_map_args(args.map))
+    try:
+        runner = make_runner(args, cfg)
+    except ValueError as exc:
+        print("retrace migrate: error: %s" % exc, file=sys.stderr)
+        return EXIT_ERROR
     if not mappings:
         print("retrace migrate: error: no mapping given -- add --map "
               "OLD:NEW or a [map] section in retrace.toml",
@@ -145,13 +151,14 @@ def cmd_migrate(args) -> int:
     # step 3: the agent loop (always isolated; edits re-import fresh)
     print("retrace migrate: [3/4] driving the agent until every recorded "
           "behavior matches...")
-    remaining = run_loop(args.traces, mappings, cfg, args.agent,
+    remaining = run_loop(args.traces, mappings, cfg,
                          max_iters=args.max_iters, timeout=args.timeout,
                          workdir=workdir,
                          quality_gate=not getattr(args, "no_quality",
                                                   False),
                          agent_timeout=getattr(args, "agent_timeout",
-                                               1800.0))
+                                               1800.0),
+                         runner=runner)
     if remaining > 0:
         print("retrace migrate: FAILED -- %d divergences remain after %d "
               "iterations (see retrace-report.md)"

@@ -115,6 +115,18 @@ def rewrite_files(mappings: Dict[str, str], workdir: str):
 AGENT_TIMED_OUT = -9999
 
 
+class ShellAgent:
+    """The BYO door: any agent CLI, prompt via stdin or {prompt_file}."""
+
+    def __init__(self, agent_cmd: str, agent_timeout: float = 1800.0):
+        self.agent_cmd = agent_cmd
+        self.agent_timeout = agent_timeout
+
+    def run(self, prompt: str, files, workdir: str) -> int:
+        return run_agent(self.agent_cmd, prompt, workdir,
+                         agent_timeout=self.agent_timeout)
+
+
 def run_agent(agent_cmd: str, prompt: str, workdir: str,
               agent_timeout: float = 1800.0) -> int:
     prompt_file = os.path.join(workdir, "retrace-fix-prompt.md")
@@ -144,12 +156,13 @@ def _fingerprint(report: Dict, blocking_quality: int) -> str:
 
 
 def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
-             agent_cmd: str, max_iters: int = 5,
+             agent_cmd: str = None, max_iters: int = 5,
              timeout: float = 30.0, workdir: str = ".",
              json_out: str = report_mod.REPORT_JSON,
              md_out: str = report_mod.REPORT_MD,
              quality_gate: bool = True,
-             agent_timeout: float = 1800.0) -> int:
+             agent_timeout: float = 1800.0,
+             runner=None) -> int:
     """Returns the number of blocking problems remaining (0 = success):
     behavioral divergences plus, with the quality gate on (default),
     error-severity security/quality findings in the rewrite files.
@@ -159,6 +172,8 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
     replay would keep testing the stale module from before the fix)."""
     from . import quality as quality_mod
 
+    if runner is None:
+        runner = ShellAgent(agent_cmd, agent_timeout)
     remaining = 0
     previous_fingerprint = None
     for iteration in range(1, max_iters + 1):
@@ -200,11 +215,10 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         if iteration == max_iters:
             break
         print("retrace loop: invoking agent...")
-        code = run_agent(
-            agent_cmd,
+        code = runner.run(
             build_prompt(report, findings, files=files,
                          iteration=iteration, max_iters=max_iters),
-            workdir, agent_timeout=agent_timeout)
+            files, workdir)
         if code == AGENT_TIMED_OUT:
             print("retrace loop: agent timed out after %ds; stopping"
                   % agent_timeout)

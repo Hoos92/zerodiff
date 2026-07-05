@@ -32,12 +32,20 @@ Retrace itself never calls a model. Your traces never leave your machine.
 
 ## Which LLM does the agent loop use?
 
-None of its own. `retrace loop` / `retrace migrate` run whatever CLI
-command you pass as `--agent` — with `--agent "claude -p ..."` the model
-is Claude, with `--agent "codex exec ..."` it's OpenAI's, and a plain
-shell script works too. Retrace pipes the divergence report in and
-verifies what came out; the model choice, permissions, and API costs are
-entirely yours.
+None of its own — you choose, through either door:
+
+- `--agent "<cli command>"`: any external agent (Claude Code, Codex,
+  Cursor CLI, a shell script). The model is whatever that agent runs.
+- `--llm provider:model`: Retrace's **built-in minimal agent** calls the
+  LLM API directly with *your* key — `anthropic:...`, `openai:...`, or
+  `openai-compatible:...` with `--llm-base-url` (Ollama, OpenRouter,
+  vLLM, Gemini's compatibility endpoint). No third-party agent install
+  needed. Validate a key/model in seconds with `retrace llm-check`.
+
+Either way the verifier itself stays deterministic and model-free, and
+the model choice, permissions, and API costs are entirely yours. The
+built-in agent is least-privilege by design: no shell, no tools, and it
+can only write the rewrite files under verification.
 
 ## What stops the agent from writing insecure code?
 

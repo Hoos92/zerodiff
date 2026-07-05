@@ -21,6 +21,13 @@ for suspected vulnerabilities.
 - **`retrace loop` / `retrace migrate` run the agent command you supply**
   with your shell and your permissions. Retrace does not sandbox your
   agent; choose its permission flags deliberately.
+- **The built-in agent (`--llm`) sends fix prompts to your chosen LLM
+  provider.** Fix prompts contain divergence details, which include
+  recorded inputs/outputs — apply `redact_fields` at record time if
+  traces may contain secrets. (BYO agents have the same data path via
+  their own vendor.) The built-in agent itself is least-privilege: no
+  shell, no tools, writes only to the allowlisted rewrite files, and its
+  output still passes the quality gate and replay.
 - **Attestations use HMAC-SHA256** with a shared key: they prove integrity
   to anyone holding the key (tamper-evidence), not third-party
   non-repudiation. Keep the key out of the repo; rotate it like any
