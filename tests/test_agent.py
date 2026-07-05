@@ -204,6 +204,10 @@ def test_builtin_agent_full_loop_with_quality_gate(stub, ws):
                          runner=runner)
     assert remaining == 0
     assert len(script.requests) == 2
+    # the first prompt carried the ORIGINAL source as read-only reference
+    first_prompt = script.requests[0]["body"]["messages"][1]["content"]
+    assert "Original legacy source" in first_prompt
+    assert "return x * 2" in first_prompt
     # the second prompt carried the quality finding to the agent
     second_prompt = script.requests[1]["body"]["messages"][1]["content"]
     assert "eval-exec" in second_prompt

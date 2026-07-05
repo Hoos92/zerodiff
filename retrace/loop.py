@@ -64,7 +64,7 @@ PROMPT_ENTRY = """\
 
 
 def build_prompt(report: Dict, quality_findings=None, files=None,
-                 iteration=None, max_iters=None) -> str:
+                 iteration=None, max_iters=None, originals=None) -> str:
     divergences = report["divergences"]
     shown = divergences[:MAX_PROMPT_DIVERGENCES]
     lines = [PROMPT_HEADER.format(count=len(shown), total=len(divergences))]
@@ -92,7 +92,47 @@ def build_prompt(report: Dict, quality_findings=None, files=None,
     if mappings:
         lines.append("The rewrite modules (old -> new): " + ", ".join(
             "%s -> %s" % (k, v) for k, v in sorted(mappings.items())))
+    if originals:
+        lines.append("\nOriginal legacy source (READ-ONLY reference: "
+                     "replicate its behavior exactly, quirks included; "
+                     "the recorded behaviors above remain the ground "
+                     "truth):")
+        for name, text in originals:
+            lines.append("--- original module %s ---\n%s\n--- end ---"
+                         % (name, text))
     return "\n".join(lines) + "\n"
+
+
+MAX_ORIGINAL_CHARS = 15000
+
+
+def original_sources(mappings: Dict[str, str], workdir: str):
+    """Locate the ORIGINAL (legacy) modules' source for the fix prompt.
+    The recorded behavior stays the ground truth; the source is reference
+    material -- without it, a from-scratch rewrite forces the agent to
+    reverse-engineer formulas from I/O pairs, which live testing showed
+    even strong models cannot do reliably."""
+    import importlib.util
+
+    sources = []
+    for old_prefix in sorted(mappings):
+        try:
+            spec = importlib.util.find_spec(old_prefix)
+        except Exception:
+            continue
+        origin = getattr(spec, "origin", None) if spec else None
+        if not origin or not os.path.exists(origin):
+            continue
+        try:
+            with open(origin, "r", encoding="utf-8",
+                      errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        if len(text) > MAX_ORIGINAL_CHARS:
+            text = text[:MAX_ORIGINAL_CHARS] + "\n# ... (truncated)\n"
+        sources.append((old_prefix, text))
+    return sources
 
 
 def rewrite_files(mappings: Dict[str, str], workdir: str):
@@ -174,6 +214,7 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
 
     if runner is None:
         runner = ShellAgent(agent_cmd, agent_timeout)
+    originals = original_sources(mappings, workdir)
     remaining = 0
     previous_fingerprint = None
     for iteration in range(1, max_iters + 1):
@@ -217,7 +258,8 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         print("retrace loop: invoking agent...")
         code = runner.run(
             build_prompt(report, findings, files=files,
-                         iteration=iteration, max_iters=max_iters),
+                         iteration=iteration, max_iters=max_iters,
+                         originals=originals),
             files, workdir)
         if code == AGENT_TIMED_OUT:
             print("retrace loop: agent timed out after %ds; stopping"

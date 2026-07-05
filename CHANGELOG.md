@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.1 — 2026-07-05 (live-run fix: original source in fix prompts)
+
+- fix prompts now include the ORIGINAL legacy modules' source as
+  read-only reference (located via import machinery, 15KB/module cap).
+  Found by live testing with real OpenAI models: without the reference,
+  from-scratch scaffolds force the agent to reverse-engineer formulas
+  from I/O pairs — gpt-4o-mini plateaued at 15/37 and gpt-4o at 18/37;
+  with it, gpt-4o-mini one-shots the same migration (37/37) and a real
+  library, pytimeparse (42/42), fully unattended
+- recorded behavior remains the ground truth; the source is reference
+  material, and it is part of what gets sent to the chosen LLM provider
+  (see SECURITY.md)
+
 ## 0.9.0 — 2026-07-05 (built-in agent)
 
 - two doors into the loop: `--agent "<cli>"` (BYO, unchanged) or
