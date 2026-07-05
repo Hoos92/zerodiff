@@ -139,8 +139,38 @@ Finds worth the price of admission:
   (format precedes length), and the 979 error carries the custom message
   "Does not use 978 Bookland prefix."
 
+---
+
+# Fourth cohort: spec-heavy parsers, full pipeline on v0.8.0
+
+Three libraries chosen for edge-case density, each run end-to-end through
+`retrace migrate` (record → scaffold → agent loop → **signed
+attestation**), exercising the v0.8.0 loop economics live — stall
+detection stopped every first run the moment the scripted agent made no
+progress:
+
+| library | GitHub | behaviors | first pass | to green |
+|---|---|---|---|---|
+| `semver` | python-semver/python-semver | 277 | **2 diverged** | 2 |
+| `humanfriendly` | xolox/python-humanfriendly | 113 | **8 diverged** | 2 |
+| `pytimeparse` | wroberts/pytimeparse | 42 | **2 diverged** | 2 |
+
+Finds:
+
+- **`semver.bump_prerelease` is a silent no-op** on a prerelease with no
+  digits (`"1.2.3-alpha"` comes back unchanged), and it bumps the
+  rightmost *embedded* number: `alpha.7.x` → `alpha.8.x`.
+- **`humanfriendly.format_timespan` silently drops everything below the
+  three largest units** (90061s → "1 day, 1 hour and 1 minute" — the
+  second vanishes), and its **year is 52 weeks**, not 365.25 days. Its
+  size tokenizer rejects `"1e3 KB"` but accepts `"1 KB extra"` (trailing
+  junk ignored).
+- **`pytimeparse` refuses bare numbers** (`"32"` → None, not seconds) and
+  the word "and" (`"1 hour and 2 minutes"` → None) while accepting
+  commas — permissive-grammar contracts a rewrite "fixes" and breaks.
+
 ## Program totals (all cohorts + dateutil case study)
 
-**8 real libraries, 12,520 recorded behaviors, 8/8 clean-room rewrites
-wrong on first pass, 157 divergences found, every library brought to 100%
+**11 real libraries, 12,952 recorded behaviors, 11/11 clean-room rewrites
+wrong on first pass, 169 divergences found, every library brought to 100%
 of recorded behaviors within three passes.**

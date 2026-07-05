@@ -161,12 +161,13 @@ the trace files, not merely the report.
   modern rewrite, with zero source edits. Retrace caught the one divergence
   a human review would wave through. Write-up with numbers:
   [docs/CASE_STUDY.md](docs/CASE_STUDY.md).
-- `examples/validation_*` — seven more real GitHub libraries (`roman`,
+- `examples/validation_*` — ten more real GitHub libraries (`roman`,
   `inflection`, `humanize`, `word2number`, `python-slugify`, `num2words`,
-  and `python-stdnum` through the full `retrace migrate` pipeline with
-  attestation). Program total: **8 libraries, 12,520 recorded behaviors,
-  8/8 clean-room rewrites wrong on first pass, all brought to 100%**.
-  Results: [docs/VALIDATION.md](docs/VALIDATION.md).
+  `python-stdnum`, `semver`, `humanfriendly`, `pytimeparse` — the last
+  four through the full `retrace migrate` pipeline with signed
+  attestations). Program total: **11 libraries, 12,952 recorded
+  behaviors, 11/11 clean-room rewrites wrong on first pass, all brought
+  to 100%**. Results: [docs/VALIDATION.md](docs/VALIDATION.md).
 
 Questions like "do I need an LLM for this?" (no) are answered in the
 [FAQ](docs/FAQ.md).

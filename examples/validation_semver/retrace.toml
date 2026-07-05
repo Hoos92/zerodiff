@@ -1,0 +1,3 @@
+# the legacy module-level API lives in semver._deprecated
+[map]
+"semver._deprecated" = "semver_v2"
