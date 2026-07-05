@@ -244,6 +244,21 @@ def _max_nesting(fn_node) -> int:
     return depth(fn_node, 0)
 
 
+_INLINE_IGNORE_RE = re.compile(
+    r"#\s*retrace-quality:\s*ignore\[([a-z\-, ]+)\]")
+
+
+def _inline_ignores(source: str) -> Dict[int, set]:
+    """`# retrace-quality: ignore[rule]` suppresses that rule on that line
+    -- visible in the diff, reviewable, unlike a global disable."""
+    ignores = {}
+    for lineno, line in enumerate(source.splitlines(), 1):
+        match = _INLINE_IGNORE_RE.search(line)
+        if match:
+            ignores[lineno] = {r.strip() for r in match.group(1).split(",")}
+    return ignores
+
+
 def check_source(source: str, path: str,
                  budgets: Optional[Dict[str, int]] = None,
                  disabled: Optional[List[str]] = None) -> List[Finding]:
@@ -273,6 +288,11 @@ def check_source(source: str, path: str,
                      "credential-shaped literal in source",
                      "this looks like a real API token; revoke it and "
                      "load it from the environment instead.")
+
+    ignores = _inline_ignores(source)
+    if ignores:
+        return [f for f in analyzer.findings
+                if f.rule not in ignores.get(f.line, ())]
     return analyzer.findings
 
 

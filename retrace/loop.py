@@ -173,12 +173,13 @@ def run_agent(agent_cmd: str, prompt: str, workdir: str,
     with open(prompt_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(prompt)
     try:
+        # the user's --agent value IS a shell command by contract
         if "{prompt_file}" in agent_cmd:
             cmd = agent_cmd.replace("{prompt_file}", prompt_file)
-            proc = subprocess.run(cmd, shell=True, cwd=workdir,
+            proc = subprocess.run(cmd, shell=True, cwd=workdir,  # retrace-quality: ignore[shell-injection]
                                   timeout=agent_timeout)
         else:
-            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,
+            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,  # retrace-quality: ignore[shell-injection]
                                   input=prompt.encode("utf-8"),
                                   timeout=agent_timeout)
     except subprocess.TimeoutExpired:

@@ -33,26 +33,37 @@ def map_target(target: str, mappings: Dict[str, str]) -> str:
     return mappings[best_old] + target[len(best_old):]
 
 
-def resolve_callable(target: str) -> Optional[Callable]:
-    """Resolve 'pkg.mod.func' or 'pkg.mod.Class.method' to a callable.
+def resolve_callable(target: str):
+    """Resolve 'pkg.mod.func' to (callable, None) or (None, why).
 
-    Tries the longest importable module prefix, then walks attributes."""
+    A module that EXISTS but fails to import (relative imports, syntax
+    errors, missing deps) is a completely different failure from a
+    missing function -- the reason is surfaced so agents can fix it."""
     parts = target.split(".")
     for split in range(len(parts) - 1, 0, -1):
         module_name = ".".join(parts[:split])
         try:
             obj = importlib.import_module(module_name)
-        except ImportError:
-            continue
+        except ModuleNotFoundError as exc:
+            if exc.name == module_name:
+                continue  # this prefix genuinely doesn't exist; try shorter
+            # the module exists but imports something that doesn't
+            return None, ("module %r failed to import: %s: %s"
+                          % (module_name, type(exc).__name__, exc))
+        except Exception as exc:  # module found but broken on import
+            return None, ("module %r failed to import: %s: %s"
+                          % (module_name, type(exc).__name__, exc))
         try:
             for attr in parts[split:]:
                 obj = getattr(obj, attr)
         except AttributeError:
-            return None
+            return None, ("module %r imports fine but has no attribute "
+                          "%r" % (module_name,
+                                  ".".join(parts[split:])))
         # unwrap if the replacement itself is decorated with @retrace.record
         inner = getattr(obj, "__retrace_wrapped__", None)
-        return inner if inner is not None else obj
-    return None
+        return (inner if inner is not None else obj), None
+    return None, "no importable module found for %r" % target
 
 
 def _encode_args(args, kwargs) -> Dict[str, Any]:
@@ -82,9 +93,9 @@ class InProcessInvoker:
 
     def invoke(self, target: str,
                encoded_input: Dict[str, Any]) -> Dict[str, Any]:
-        fn = resolve_callable(target)
+        fn, resolve_error = resolve_callable(target)
         if fn is None:
-            return {"status": "missing"}
+            return {"status": "missing", "detail": resolve_error}
         try:
             args = [serializer.decode(a)
                     for a in encoded_input.get("args", [])]
@@ -300,12 +311,14 @@ def replay_one(trace: Dict[str, Any], mappings: Dict[str, str],
     if status == "missing":
         stats["diverged"] += 1
         result.diverged_traces += 1
+        detail = outcome.get("detail") or ""
         result.divergences.append(differ.Divergence(
             differ.KIND_MISSING, target, tid, "boundary", target, new_target,
-            "recorded boundary {t} maps to {n}, which does not resolve to a "
-            "callable -- the rewrite is missing this function, or the "
-            "[map] entry in retrace.toml is wrong.".format(
-                t=target, n=new_target), input_preview=preview))
+            "recorded boundary {t} maps to {n}, which does not resolve to "
+            "a callable ({d}). The rewrite must be a standalone module: "
+            "absolute imports only, no imports from the original "
+            "package.".format(t=target, n=new_target, d=detail),
+            input_preview=preview))
         return
 
     if status in ("crash", "hang"):

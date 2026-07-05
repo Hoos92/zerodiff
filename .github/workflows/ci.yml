@@ -24,3 +24,6 @@ jobs:
       - run: python -m pytest tests/ -q
       - name: demo smoke test
         run: retrace demo
+      - name: dogfood the quality gate on our own source
+        shell: bash
+        run: retrace quality retrace/*.py

@@ -34,6 +34,9 @@ Implement each function below so its behavior matches the recorded
 behavior of the original exactly -- including exception types, messages,
 and returned value types. The replay loop will report every divergence
 with the exact input that exposes it.
+
+This module must be STANDALONE: absolute imports only, no relative
+imports, and no imports from the original package being replaced.
 """
 '''
 

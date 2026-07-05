@@ -169,8 +169,46 @@ Finds:
   the word "and" (`"1 hour and 2 minutes"` → None) while accepting
   commas — permissive-grammar contracts a rewrite "fixes" and breaks.
 
+---
+
+# Live cohort: real LLM, fully unattended (v0.9.1+)
+
+Run with `retrace migrate --llm openai:...` — a live OpenAI model writing
+the code, no human in the loop, on a real funded API key:
+
+| target | model | result | iterations |
+|---|---|---|---|
+| shipping demo (37 behaviors) | gpt-4o-mini | **37/37 SUCCESS** | 1 agent call |
+| `pytimeparse` (42) | gpt-4o-mini | **42/42 SUCCESS** | 1 agent call |
+| `roman` (10,083) | gpt-4o-mini | **10,083/10,083 SUCCESS** | 2 agent calls |
+| `semver` (277) | gpt-4o-mini | stalled at 0 (kept importing the original's internal class) | stall-stopped |
+| `semver` (277) | gpt-4o | **275/277** — stuck on the same two `bump_prerelease` quirks that fooled the human first pass | 8 calls |
+
+What the live runs taught (and changed) about the product:
+
+- **Without the original source in the prompt, from-scratch rewrites are
+  nearly impossible** — models plateaued reverse-engineering formulas
+  from I/O pairs (15/37, 18/37). With the source as read-only reference
+  (v0.9.1), the cheapest model one-shots the same migrations.
+- **Import failures must be diagnosed, not reported as "missing"** —
+  gpt-4o-mini "fixed" semver's relative import by inventing a
+  nonexistent module; the resolver now surfaces the actual import error
+  in the hint (v0.10.0).
+- **Migration difficulty splits into "translate" vs "restructure."**
+  Modules whose source is self-contained (roman, pytimeparse) are
+  one-shot for a mini model. Modules that are thin wrappers around
+  internal classes (semver's `_deprecated.py`) need a stronger model —
+  gpt-4o climbed 0 → 159 → 246 → 275 of 277.
+- **The last two semver divergences are the punchline**: gpt-4o would
+  not accept that `bump_prerelease("1.2.3-alpha")` is a no-op — it kept
+  "fixing" it — the *same* mistake the human clean-room rewrite made.
+  The model and the human failed identically; the recording caught both.
+- **Stall detection paid for itself in real dollars** every time a model
+  stopped progressing.
+
 ## Program totals (all cohorts + dateutil case study)
 
-**11 real libraries, 12,952 recorded behaviors, 11/11 clean-room rewrites
-wrong on first pass, 169 divergences found, every library brought to 100%
-of recorded behaviors within three passes.**
+**11 real libraries verified to 100% by hint-guided rewrites (12,952
+recorded behaviors, 11/11 wrong on first pass, 169 divergences), plus a
+live cohort: 3 fully-unattended LLM migrations reaching 100%
+(10,162 behaviors) and one hard case honestly at 275/277.**

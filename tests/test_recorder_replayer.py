@@ -169,10 +169,23 @@ class TestMappingAndResolution:
         assert map_target("unmapped.fn", mappings) == "unmapped.fn"
 
     def test_resolve_module_function(self):
-        fn = resolve_callable("os.path.join")
+        fn, error = resolve_callable("os.path.join")
         import os.path
-        assert fn is os.path.join
+        assert fn is os.path.join and error is None
 
-    def test_resolve_missing_returns_none(self):
-        assert resolve_callable("os.path.not_a_function") is None
-        assert resolve_callable("no_such_module_xyz.fn") is None
+    def test_resolve_missing_returns_reason(self):
+        fn, error = resolve_callable("os.path.not_a_function")
+        assert fn is None and "no attribute" in error
+        fn, error = resolve_callable("no_such_module_xyz.fn")
+        assert fn is None and "no importable module" in error
+
+    def test_resolve_broken_module_surfaces_import_error(self, tmp_path,
+                                                         monkeypatch):
+        monkeypatch.syspath_prepend(str(tmp_path))
+        (tmp_path / "brokenmod_a.py").write_text(
+            "from .nowhere import thing\n", encoding="utf-8")
+        importlib.invalidate_caches()
+        fn, error = resolve_callable("brokenmod_a.fn")
+        assert fn is None
+        assert "failed to import" in error and "brokenmod_a" in error
+        sys.modules.pop("brokenmod_a", None)

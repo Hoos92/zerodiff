@@ -4,7 +4,7 @@ Record what legacy code really does, replay it against a rewrite, and get
 every divergence as an actionable report.
 """
 
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 
 from .recorder import record, start_recording, stop_recording, wrap
 from .serializer import register_adapter

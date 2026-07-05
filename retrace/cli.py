@@ -207,6 +207,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         "history", help="(Enterprise) show verification results over time")
     p_history.add_argument("-n", "--limit", type=int, default=20)
 
+    p_insights = sub.add_parser(
+        "insights", help="mine your reports and history for concrete "
+                         "setup improvements (local; nothing leaves the "
+                         "machine)")
+    p_insights.add_argument("-i", "--input",
+                            default=report_mod.REPORT_JSON)
+
     p_llmcheck = sub.add_parser(
         "llm-check", help="validate an --llm key/model/endpoint with one "
                           "tiny round-trip before burning a real run")
@@ -250,6 +257,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             return _cmd_quality(args)
         if args.command == "llm-check":
             return _cmd_llm_check(args)
+        if args.command == "insights":
+            from .insights import cmd_insights
+            return cmd_insights(args.input)
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
         print("retrace: error: {}".format(exc), file=sys.stderr)

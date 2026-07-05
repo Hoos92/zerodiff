@@ -23,9 +23,9 @@ def _reply(proto, payload):
 def handle(request):
     target = request["target"]
     encoded_input = request["input"]
-    fn = resolve_callable(target)
+    fn, resolve_error = resolve_callable(target)
     if fn is None:
-        return {"status": "missing"}
+        return {"status": "missing", "detail": resolve_error}
     try:
         args = [serializer.decode(a) for a in encoded_input.get("args", [])]
         kwargs = {k: serializer.decode(v)

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.10.0 — 2026-07-05 (self-improvement loops + live cohort)
+
+- `retrace insights`: mines your report and history locally into
+  concrete next actions (adapters for weak comparisons, float_tolerance
+  for numeric noise, hot boundaries, attest/CI habits after a green
+  streak, regression pointer to the last green commit)
+- inline quality suppressions with an audit trail:
+  `# retrace-quality: ignore[rule]` on the flagged line
+- CI now dogfoods the quality gate on Retrace's own source
+- resolver diagnostics: a rewrite module that exists but fails to import
+  (relative imports, missing deps) now surfaces the actual import error
+  in the missing_boundary hint; agent prompt + scaffold demand
+  standalone modules (found via live semver run, where the model
+  "fixed" a relative import by inventing a nonexistent module)
+- live cohort documented in VALIDATION.md: gpt-4o-mini one-shots
+  pytimeparse (42/42) and roman (10,083/10,083) fully unattended;
+  semver reaches 275/277 with gpt-4o — stuck on the same two
+  bump_prerelease quirks that fooled the human first pass
+- docs/PRICING.md: Free / Team / Enterprise / Verified Migration tiers
+
 ## 0.9.1 — 2026-07-05 (live-run fix: original source in fix prompts)
 
 - fix prompts now include the ORIGINAL legacy modules' source as

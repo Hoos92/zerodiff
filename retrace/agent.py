@@ -35,6 +35,9 @@ Rules:
 - Never use eval/exec, os.system, subprocess with shell=True, pickle
   loading, string-built SQL, or hardcoded secrets; never disable TLS
   verification; no mutable default arguments; keep functions small.
+- The rewrite must be a STANDALONE top-level module: absolute imports
+  only, never relative imports, and never import the original package
+  you are replacing.
 - Reply ONLY with full replacement contents for the files you change,
   in this exact format (one block per file, nothing else matters):
 
