@@ -466,6 +466,10 @@ def _replay_traces(traces: List[Dict[str, Any]], mappings: Dict[str, str],
 def replay_all(trace_dir: str, mappings: Dict[str, str], cfg: Config,
                isolate: bool = False, timeout: float = DEFAULT_TIMEOUT,
                in_order: bool = False, jobs: int = 1) -> ReplayResult:
+    if in_order and jobs > 1:
+        # guard at the API level too, not just the CLI: shards cannot
+        # preserve global chronology
+        raise ValueError("in_order and jobs>1 are incompatible")
     if in_order:
         # stateful code: replay EVERY call chronologically -- identical
         # inputs can legitimately produce different outputs as module

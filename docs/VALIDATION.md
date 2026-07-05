@@ -206,6 +206,33 @@ What the live runs taught (and changed) about the product:
 - **Stall detection paid for itself in real dollars** every time a model
   stopped progressing.
 
+---
+
+# Hard cohort: where autonomous migration breaks — and Retrace holds the line
+
+Three deliberately brutal targets, run fully unattended with GPT-4o
+(`retrace migrate --llm openai:gpt-4o`, 6 iterations max):
+
+| target | what makes it brutal | behaviors | best unattended result |
+|---|---|---|---|
+| `chevron` (Mustache engine) | recursive rendering — the recording captures the engine's own internal recursive calls, so the rewrite must reproduce the exact recursion contract | 77 | 23/77, then the model *regressed to 0* chasing hints |
+| `validators` | regex-dense rules + a bizarre contract: invalid inputs return a falsy ValidationError *object*, not an exception | 72 | oscillated 14 ↔ 23 forever |
+| `python-dotenv` | quoting/interpolation quirks, file-based fixture inputs | 19 | climbed to 12/19, stalled |
+
+**This is the pitch, not a failure.** Every one of those wrong rewrites
+ran fine and would have sailed through a typical review — 148 behavioral
+divergences that only recorded reality caught. Retrace's role is exactly
+this: when the agent can do it (see the live cohort above: 42/42,
+10,083/10,083), verification proves it; when the agent can't, the gate
+stays red and nothing broken ships. The capability frontier is measured,
+not guessed.
+
+The cohort also improved the product itself: `validators`' A-B-A-B
+oscillation slipped past consecutive-iteration stall detection, so the
+loop now remembers recent problem fingerprints and stops on *cycles*,
+not just repeats. Every failure mode a model exhibits becomes a
+guardrail.
+
 ## Program totals (all cohorts + dateutil case study)
 
 **11 real libraries verified to 100% by hint-guided rewrites (12,952

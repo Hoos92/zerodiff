@@ -217,7 +217,7 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         runner = ShellAgent(agent_cmd, agent_timeout)
     originals = original_sources(mappings, workdir)
     remaining = 0
-    previous_fingerprint = None
+    recent_fingerprints = []  # detects A-A stalls AND A-B-A-B cycles
     for iteration in range(1, max_iters + 1):
         result = replay_all(trace_dir, mappings, cfg, isolate=True,
                             timeout=timeout)
@@ -246,13 +246,13 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
             return 0
 
         fingerprint = _fingerprint(report, blocking)
-        if fingerprint == previous_fingerprint:
-            print("retrace loop: agent made no progress (identical "
-                  "problems two iterations in a row); stopping early "
-                  "after %d iterations to avoid burning agent spend"
+        if fingerprint in recent_fingerprints[-3:]:
+            print("retrace loop: agent is stalled or cycling (this exact "
+                  "problem set was already seen); stopping early after "
+                  "%d iterations to avoid burning agent spend"
                   % iteration)
             break
-        previous_fingerprint = fingerprint
+        recent_fingerprints.append(fingerprint)
 
         if iteration == max_iters:
             break
