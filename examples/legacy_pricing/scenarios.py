@@ -1,8 +1,8 @@
-"""Exercises the legacy pricing module. Contains no retrace code at all.
+"""Exercises the legacy pricing module. Contains no nodrift code at all.
 
 Use with auto-instrumentation (zero edits to any file):
 
-    retrace record --include pricing -o traces -- python scenarios.py
+    nodrift record --include pricing -o traces -- python scenarios.py
 """
 
 import pricing

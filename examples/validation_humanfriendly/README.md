@@ -15,7 +15,7 @@ First pass: **105 of 113 matched**. The 8 misses:
 
 ```bash
 pip install humanfriendly
-retrace migrate --driver "python run_scenarios.py" \
+nodrift migrate --driver "python run_scenarios.py" \
     --agent "python install_agent.py" --max-iters 3 \
     --attest --key-file team.key
 ```

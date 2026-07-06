@@ -6,11 +6,11 @@ import textwrap
 
 import pytest
 
-import retrace
-from retrace import recorder
-from retrace.config import Config, _parse_toml_subset
-from retrace.replayer import replay_all
-from retrace.scrubbers import REDACTED, scrub
+import nodrift
+from nodrift import recorder
+from nodrift.config import Config, _parse_toml_subset
+from nodrift.replayer import replay_all
+from nodrift.scrubbers import REDACTED, scrub
 
 CONFIG_TOML = """
 [scrub]
@@ -20,9 +20,9 @@ redact_fields = ["password", "*.api_token"]
 
 @pytest.fixture()
 def redact_env(tmp_path, monkeypatch):
-    cfg_path = tmp_path / "retrace.toml"
+    cfg_path = tmp_path / "nodrift.toml"
     cfg_path.write_text(CONFIG_TOML, encoding="utf-8")
-    monkeypatch.setenv("RETRACE_CONFIG", str(cfg_path))
+    monkeypatch.setenv("NODRIFT_CONFIG", str(cfg_path))
     monkeypatch.setattr(recorder, "_config", None)  # drop cached config
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
@@ -50,13 +50,13 @@ def test_secrets_never_reach_disk_and_replay_still_matches(redact_env):
     """), encoding="utf-8")
     traces = str(redact_env / "traces")
 
-    retrace.wrap("redmod_a", "login")
-    retrace.start_recording(traces)
+    nodrift.wrap("redmod_a", "login")
+    nodrift.start_recording(traces)
     try:
         module = importlib.import_module("redmod_a")
         module.login({"user": "ada", "password": "hunter2-SECRET"})
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
 
     # the secret appears nowhere in any trace file on disk
     trace_files = list((redact_env / "traces").glob("*.jsonl"))
@@ -78,12 +78,12 @@ def test_divergences_carry_the_offending_input(redact_env):
         "def f(x):\n    return x * 3\n", encoding="utf-8")
     traces = str(redact_env / "traces_b")
 
-    retrace.wrap("redmod_b", "f")
-    retrace.start_recording(traces)
+    nodrift.wrap("redmod_b", "f")
+    nodrift.start_recording(traces)
     try:
         importlib.import_module("redmod_b").f(7)
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
 
     result = replay_all(traces, {"redmod_b": "redmod_b2"}, Config())
     assert len(result.divergences) == 1

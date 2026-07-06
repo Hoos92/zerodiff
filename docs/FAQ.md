@@ -1,34 +1,34 @@
-# Retrace FAQ
+# NoDrift FAQ
 
-## Do I need an LLM to use Retrace?
+## Do I need an LLM to use NoDrift?
 
 **No.** The core product is fully deterministic — recording, replay,
 diffing, and reporting involve no AI, no API keys, no network calls, and
-produce identical results on every run. You can use Retrace exactly like
+produce identical results on every run. You can use NoDrift exactly like
 you use pytest:
 
-- run `retrace record` / `retrace replay` by hand or in CI,
-- gate merges with the GitHub Action or `retrace.testing.verify_traces()`,
-- read `retrace-report.md` yourself and fix divergences yourself.
+- run `nodrift record` / `nodrift replay` by hand or in CI,
+- gate merges with the GitHub Action or `nodrift.testing.verify_traces()`,
+- read `nodrift-report.md` yourself and fix divergences yourself.
 
 Where an LLM *optionally* enters is on the **fixing** side — when you want
-something to write or repair the rewrite for you. Retrace supports three
+something to write or repair the rewrite for you. NoDrift supports three
 levels of that, all vendor-neutral:
 
 1. **You use your own agent, manually.** Ask Claude Code / Cursor /
-   Copilot to fix the code and paste or point it at `retrace-report.json`
+   Copilot to fix the code and paste or point it at `nodrift-report.json`
    — every divergence carries a hint written for exactly this purpose.
-2. **Your agent calls Retrace natively.** Register the MCP server
-   (`claude mcp add retrace -- retrace mcp`) and the agent can run
-   `retrace_replay` itself and read the results, mid-task. The Claude Code
+2. **Your agent calls NoDrift natively.** Register the MCP server
+   (`claude mcp add nodrift -- nodrift mcp`) and the agent can run
+   `nodrift_replay` itself and read the results, mid-task. The Claude Code
    hook variant blocks any edit that breaks recorded behavior.
-3. **Retrace drives the agent, unattended.**
-   `retrace loop -t traces --agent "claude -p --permission-mode acceptEdits"`
+3. **NoDrift drives the agent, unattended.**
+   `nodrift loop -t traces --agent "claude -p --permission-mode acceptEdits"`
    replays, hands every divergence to the agent CLI you name, and repeats
    until 100% or the iteration cap. The `--agent` command is any shell
    command — Claude Code, Codex, Cursor CLI, or a shell script of your own.
 
-Retrace itself never calls a model. Your traces never leave your machine.
+NoDrift itself never calls a model. Your traces never leave your machine.
 
 ## Which LLM does the agent loop use?
 
@@ -36,11 +36,11 @@ None of its own — you choose, through either door:
 
 - `--agent "<cli command>"`: any external agent (Claude Code, Codex,
   Cursor CLI, a shell script). The model is whatever that agent runs.
-- `--llm provider:model`: Retrace's **built-in minimal agent** calls the
+- `--llm provider:model`: NoDrift's **built-in minimal agent** calls the
   LLM API directly with *your* key — `anthropic:...`, `openai:...`, or
   `openai-compatible:...` with `--llm-base-url` (Ollama, OpenRouter,
   vLLM, Gemini's compatibility endpoint). No third-party agent install
-  needed. Validate a key/model in seconds with `retrace llm-check`.
+  needed. Validate a key/model in seconds with `nodrift llm-check`.
 
 Either way the verifier itself stays deterministic and model-free, and
 the model choice, permissions, and API costs are entirely yours. The
@@ -68,25 +68,25 @@ function recorders (JavaScript/TypeScript first) come after.
 
 ## Is "100% matched" a proof of correctness?
 
-No, and Retrace never claims it is. It proves equivalence **over the
+No, and NoDrift never claims it is. It proves equivalence **over the
 recorded behaviors** — the inputs your recording session actually
 exercised. That is the point: recorded reality beats intentions, but its
 coverage is bounded by your driver. Reports state "matched N of M recorded
-behaviors" and list per-boundary counts; anything Retrace couldn't fully
+behaviors" and list per-boundary counts; anything NoDrift couldn't fully
 compare is flagged (`weak_comparison`, `skipped`) rather than silently
 counted as a match.
 
 ## Is my data safe?
 
-Traces are plain local files and may contain real runtime data. Retrace
-never uploads anything. `retrace init` gitignores the traces directory by
-default; `redact_fields` in `retrace.toml` strips named fields **at record
+Traces are plain local files and may contain real runtime data. NoDrift
+never uploads anything. `nodrift init` gitignores the traces directory by
+default; `redact_fields` in `nodrift.toml` strips named fields **at record
 time**, so secrets never reach disk at all.
 
 ## What kinds of code can I record?
 
 Module-level functions (and class methods via explicit
-`retrace.wrap("mod", "Class.method")`) whose inputs are reasonably
+`nodrift.wrap("mod", "Class.method")`) whose inputs are reasonably
 serializable. Side-effecting functions (DB writes, network) can be
 recorded, but replaying them performs the side effects again — keep replay
 pointed at disposable environments until side-effect interception ships.
@@ -97,5 +97,5 @@ Tests encode what someone *believed* the code should do; recordings encode
 what it *actually does*, including the quirks nobody wrote down. In our
 validation across 7 real libraries (12,251 recorded behaviors), every
 single clean-room rewrite passed casual inspection and still diverged from
-recorded reality — see [VALIDATION.md](VALIDATION.md). Retrace complements
+recorded reality — see [VALIDATION.md](VALIDATION.md). NoDrift complements
 tests; it doesn't replace them.

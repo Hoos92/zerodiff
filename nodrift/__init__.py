@@ -1,10 +1,10 @@
-"""Retrace: behavioral equivalence harness.
+"""NoDrift: behavioral equivalence harness.
 
 Record what legacy code really does, replay it against a rewrite, and get
 every divergence as an actionable report.
 """
 
-__version__ = "0.11.0"
+__version__ = "0.12.0"
 
 from .recorder import (record, record_class, start_recording,
                        stop_recording, wrap)

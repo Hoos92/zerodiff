@@ -1,8 +1,8 @@
 """Exercises `humanize` (github.com/python-humanize/humanize) number and
 filesize formatting.
 
-Zero retrace code — record with:
-    retrace record --include humanize -o traces -- python run_scenarios.py
+Zero nodrift code — record with:
+    nodrift record --include humanize -o traces -- python run_scenarios.py
 """
 
 import humanize

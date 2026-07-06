@@ -1,7 +1,7 @@
-"""retrace insights: the local self-improvement loop."""
+"""nodrift insights: the local self-improvement loop."""
 
-from retrace.insights import generate
-from retrace.quality import check_source
+from nodrift.insights import generate
+from nodrift.quality import check_source
 
 
 def _report(summary_overrides=None, divergences=None):
@@ -63,8 +63,8 @@ def test_inline_quality_suppression():
     source = ("import subprocess\n"
               "def f(c):\n"
               "    subprocess.run(c, shell=True)  "
-              "# retrace-quality: ignore[shell-injection]\n")
+              "# nodrift-quality: ignore[shell-injection]\n")
     assert check_source(source, "x.py") == []
     # without the annotation the same code is flagged
     assert check_source(source.replace(
-        "  # retrace-quality: ignore[shell-injection]", ""), "x.py")
+        "  # nodrift-quality: ignore[shell-injection]", ""), "x.py")

@@ -1,7 +1,7 @@
-"""`retrace insights` — the self-improvement loop.
+"""`nodrift insights` — the self-improvement loop.
 
-Mines your own verification artifacts (retrace-report.json and
-.retrace/history.jsonl) and turns them into concrete next actions:
+Mines your own verification artifacts (nodrift-report.json and
+.nodrift/history.jsonl) and turns them into concrete next actions:
 config to add, adapters to register, habits to adopt. Everything is
 computed locally; nothing leaves the machine.
 """
@@ -22,9 +22,9 @@ def generate(report: Dict[str, Any],
 
     if summary.get("weak_matches"):
         suggestions.append(
-            "%d comparisons were fingerprint-only (values Retrace could "
+            "%d comparisons were fingerprint-only (values NoDrift could "
             "not fully serialize). Register adapters for those types "
-            "(retrace.register_adapter) to turn weak comparisons into "
+            "(nodrift.register_adapter) to turn weak comparisons into "
             "full verification." % summary["weak_matches"])
     if summary.get("skipped_unreplayable"):
         suggestions.append(
@@ -92,15 +92,15 @@ def generate(report: Dict[str, Any],
         if len(recent) >= 3 and all(v == "matched" for v in verdicts):
             suggestions.append(
                 "Last %d runs all matched -- lock it in: add "
-                "retrace.testing.verify_traces() to your test suite, gate "
+                "nodrift.testing.verify_traces() to your test suite, gate "
                 "PRs with the GitHub Action, and sign the state with "
-                "`retrace attest`." % len(recent))
+                "`nodrift attest`." % len(recent))
         elif len(recent) >= 2 and verdicts[-1] != "matched" and \
                 verdicts[-2] == "matched":
             suggestions.append(
                 "This run regressed a previously matching state -- "
                 "compare against the last green run in "
-                ".retrace/history.jsonl (git commits are recorded there).")
+                ".nodrift/history.jsonl (git commits are recorded there).")
 
     if not suggestions:
         suggestions.append(
@@ -117,8 +117,8 @@ def cmd_insights(report_path: str, history_dir: str = ".",
         with open(report_path, "r", encoding="utf-8") as f:
             report = json.load(f)
     except FileNotFoundError:
-        print("retrace insights: no report found at %s -- run "
-              "`retrace replay` first" % report_path)
+        print("nodrift insights: no report found at %s -- run "
+              "`nodrift replay` first" % report_path)
         return 2
     history = []
     history_path = os.path.join(history_dir, HISTORY_DIR, HISTORY_FILE)
@@ -131,7 +131,7 @@ def cmd_insights(report_path: str, history_dir: str = ".",
         print(json.dumps({"verdict": report.get("verdict"),
                           "suggestions": suggestions}, indent=2))
         return 0
-    print("retrace insights (%s: %d/%d matched):"
+    print("nodrift insights (%s: %d/%d matched):"
           % (report.get("verdict"), report["summary"]["matched"],
              report["summary"]["replayed"]))
     for index, suggestion in enumerate(suggestions, 1):

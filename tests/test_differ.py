@@ -1,4 +1,4 @@
-from retrace import differ, serializer
+from nodrift import differ, serializer
 
 
 def _diff(expected_value, actual_value, tolerance=0.0):

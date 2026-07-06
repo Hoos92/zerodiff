@@ -7,10 +7,10 @@ import textwrap
 
 import pytest
 
-from retrace import store
-from retrace.autohook import instrument_module, matches
-from retrace.config import Config
-from retrace.replayer import replay_all
+from nodrift import store
+from nodrift.autohook import instrument_module, matches
+from nodrift.config import Config
+from nodrift.replayer import replay_all
 
 
 class TestMatches:
@@ -58,12 +58,12 @@ class TestInstrumentModule:
         try:
             count = instrument_module(module)
             assert count == 1
-            assert getattr(module.public, "__retrace_wrapped__", None) \
+            assert getattr(module.public, "__nodrift_wrapped__", None) \
                 is not None
-            assert getattr(module._private, "__retrace_wrapped__", None) \
+            assert getattr(module._private, "__nodrift_wrapped__", None) \
                 is None
             # imported names must not be wrapped
-            assert getattr(module.os.path.join, "__retrace_wrapped__",
+            assert getattr(module.os.path.join, "__nodrift_wrapped__",
                            None) is None
         finally:
             cleanup()
@@ -83,7 +83,7 @@ class TestInstrumentModule:
 
 def test_record_include_needs_no_source_edits(tmp_path):
     """End to end: plain legacy module + plain driver, recorded via
-    --include with zero retrace imports anywhere in user code."""
+    --include with zero nodrift imports anywhere in user code."""
     (tmp_path / "autolegmod.py").write_text(textwrap.dedent("""
         def triple(x):
             if x < 0:
@@ -106,7 +106,7 @@ def test_record_include_needs_no_source_edits(tmp_path):
     """), encoding="utf-8")
 
     proc = subprocess.run(
-        [sys.executable, "-m", "retrace.cli", "record", "-o", "traces",
+        [sys.executable, "-m", "nodrift.cli", "record", "-o", "traces",
          "--include", "autolegmod", "--", sys.executable, "plainrun.py"],
         cwd=str(tmp_path), capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr + proc.stdout
@@ -145,7 +145,7 @@ def test_include_pythonpath_is_preserved(tmp_path):
     env = dict(os.environ)
     env["PYTHONPATH"] = str(dep_dir)
     proc = subprocess.run(
-        [sys.executable, "-m", "retrace.cli", "record", "-o", "traces",
+        [sys.executable, "-m", "nodrift.cli", "record", "-o", "traces",
          "--include", "legmod2", "--", sys.executable, "run2.py"],
         cwd=str(tmp_path), capture_output=True, text=True, env=env)
     assert proc.returncode == 0, proc.stderr + proc.stdout

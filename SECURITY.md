@@ -8,18 +8,18 @@ for suspected vulnerabilities.
 
 ## Security model, stated plainly
 
-- **Retrace makes no network calls.** Recording, replay, reporting, and
+- **NoDrift makes no network calls.** Recording, replay, reporting, and
   attestation are entirely local. Nothing is uploaded anywhere.
 - **Traces contain real runtime data.** Treat the traces directory like a
-  database dump: gitignored by default (`retrace init`), redactable at
+  database dump: gitignored by default (`nodrift init`), redactable at
   record time via `redact_fields` (redacted values never reach disk).
 - **Replay executes the code under test.** In-process replay runs the
   rewrite inside the harness process; use `--isolate` for untrusted
   rewrites (worker subprocess; crashes/hangs are contained and reported).
   Replaying side-effecting code performs the side effects — point replay
   at disposable environments.
-- **`retrace loop` / `retrace migrate` run the agent command you supply**
-  with your shell and your permissions. Retrace does not sandbox your
+- **`nodrift loop` / `nodrift migrate` run the agent command you supply**
+  with your shell and your permissions. NoDrift does not sandbox your
   agent; choose its permission flags deliberately.
 - **The built-in agent (`--llm`) sends fix prompts to your chosen LLM
   provider.** Fix prompts contain divergence details (recorded

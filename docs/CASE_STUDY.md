@@ -1,4 +1,4 @@
-# Case study: rewriting `dateutil.easter` with Retrace as the gate
+# Case study: rewriting `dateutil.easter` with NoDrift as the gate
 
 `dateutil.easter.easter()` is a classic piece of legacy code: 74 lines of
 unexplained magic numbers implementing three Easter-computation methods
@@ -12,13 +12,13 @@ Everything below is reproducible from `examples/migration_dateutil/`.
 ## Step 1 — record ground truth (zero source edits)
 
 ```
-retrace record --include dateutil.easter -o traces -- python run_scenarios.py
+nodrift record --include dateutil.easter -o traces -- python run_scenarios.py
 ```
 
 The scenario driver sweeps years 1583–4099 for all three methods, hits
 century boundaries (1600, 1700, 1900, 2100, 2400…), the default-argument
 path, and the error paths. Neither `dateutil` nor the driver contains a
-single line of retrace code — the `--include` import hook instruments the
+single line of nodrift code — the `--include` import hook instruments the
 module as it loads.
 
 **Result: 1,163 calls recorded (1,145 unique behaviors), including the
@@ -34,7 +34,7 @@ being folded into the magic numbers, and readable variable names.
 ## Step 3 — replay: the gate catches what tests would miss
 
 ```
-retrace replay -t traces
+nodrift replay -t traces
 ```
 
 First pass: **1,141 of 1,145 matched, 4 diverged, exit code 1.**
@@ -56,7 +56,7 @@ precisely the kind of "improvement" AI rewrites make unprompted.
 One-line fix (restore the original wording), then:
 
 ```
-retrace replay -t traces
+nodrift replay -t traces
 ```
 
 **Second pass: 1,145 of 1,145 replayed behaviors matched. Exit code 0.**

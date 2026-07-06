@@ -1,8 +1,8 @@
 """Recording behavior at function boundaries.
 
 Recording is active when a trace directory is set, either programmatically
-(``retrace.start_recording(dir)``) or via the ``RETRACE_TRACE_DIR``
-environment variable (which is how ``retrace record -- <cmd>`` activates it
+(``nodrift.start_recording(dir)``) or via the ``NODRIFT_TRACE_DIR``
+environment variable (which is how ``nodrift record -- <cmd>`` activates it
 in a child process). When recording is inactive, decorated functions run with
 near-zero overhead.
 
@@ -21,8 +21,8 @@ from typing import Any, Callable, Dict, Optional
 
 from . import serializer, store
 
-_ENV_VAR = "RETRACE_TRACE_DIR"
-_ENV_CONFIG = "RETRACE_CONFIG"
+_ENV_VAR = "NODRIFT_TRACE_DIR"
+_ENV_CONFIG = "NODRIFT_CONFIG"
 
 _seq = itertools.count()  # global chronology across all boundaries
 
@@ -32,7 +32,7 @@ _config = None  # loaded lazily on first trace write
 
 
 def _get_config():
-    """Config for record-time redaction (RETRACE_CONFIG or ./retrace.toml).
+    """Config for record-time redaction (NODRIFT_CONFIG or ./nodrift.toml).
     A broken config must not break the recorded program."""
     global _config
     if _config is None:
@@ -124,7 +124,7 @@ def _write_trace(target: str, trace_dir: str, encoded_input: Dict,
                 "seq": next(_seq),
                 "duration_ms": round(duration_ms, 3),
                 "py": "{}.{}.{}".format(*__import__("sys").version_info[:3]),
-                "retrace": _version(),
+                "nodrift": _version(),
             },
         }
         if mutations is not None:
@@ -196,7 +196,7 @@ def record(fn: Callable) -> Callable:
         finish({"type": "return", "value": encoded_value}, duration)
         return result
 
-    wrapper.__retrace_wrapped__ = fn
+    wrapper.__nodrift_wrapped__ = fn
     return wrapper
 
 
@@ -218,7 +218,7 @@ def record_class(module_name: str, class_name: str,
         elif isinstance(attr, classmethod):
             setattr(cls, name, classmethod(record(attr.__func__)))
         elif callable(attr):
-            if getattr(attr, "__retrace_wrapped__", None) is not None:
+            if getattr(attr, "__nodrift_wrapped__", None) is not None:
                 continue
             setattr(cls, name, record(attr))
         else:
@@ -241,7 +241,7 @@ def wrap(module_name: str, function_name: str) -> Callable:
     for part in parts[:-1]:
         owner = getattr(owner, part)
     original = getattr(owner, parts[-1])
-    if getattr(original, "__retrace_wrapped__", None) is not None:
+    if getattr(original, "__nodrift_wrapped__", None) is not None:
         return original
     wrapped = record(original)
     setattr(owner, parts[-1], wrapped)

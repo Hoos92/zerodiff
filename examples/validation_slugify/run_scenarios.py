@@ -1,7 +1,7 @@
 """Exercises python-slugify (github.com/un33p/python-slugify) — medium
 complexity: a text pipeline with ~10 interacting options.
 
-    retrace record --include slugify.slugify -o traces -- python run_scenarios.py
+    nodrift record --include slugify.slugify -o traces -- python run_scenarios.py
 """
 
 from slugify import slugify

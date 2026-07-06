@@ -8,12 +8,12 @@ import textwrap
 
 import pytest
 
-import retrace
-from retrace import cli, report as report_mod
-from retrace.config import Config
-from retrace.insights import generate
-from retrace.replayer import replay_all
-from retrace.serializer import decode, encode
+import nodrift
+from nodrift import cli, report as report_mod
+from nodrift.config import Config
+from nodrift.insights import generate
+from nodrift.replayer import replay_all
+from nodrift.serializer import decode, encode
 
 
 @dataclasses.dataclass
@@ -60,16 +60,16 @@ def test_record_class_and_replay_dataclass_methods(ws):
     (ws / "v11shop.py").write_text(textwrap.dedent(CLASS_MODULE),
                                    encoding="utf-8")
     importlib.invalidate_caches()
-    assert retrace.record_class("v11shop", "Cart") == 2
+    assert nodrift.record_class("v11shop", "Cart") == 2
 
-    retrace.start_recording(str(ws / "traces"))
+    nodrift.start_recording(str(ws / "traces"))
     try:
         module = importlib.import_module("v11shop")
         cart = module.Cart([1.0, 2.5])
         cart.total(0.1)
         module.Cart.fee(100.0)
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
 
     result = replay_all(str(ws / "traces"), {"v11shop": "v11shop"},
                         Config())
@@ -81,8 +81,8 @@ def test_guard_baseline_and_check(ws, capsys):
     (ws / "v11dep.py").write_text(
         "def f(x):\n    return x * 2\n", encoding="utf-8")
     (ws / "drv.py").write_text(textwrap.dedent("""
-        import retrace
-        retrace.wrap("v11dep", "f")
+        import nodrift
+        nodrift.wrap("v11dep", "f")
         import v11dep
         for i in range(4):
             v11dep.f(i)
@@ -114,8 +114,8 @@ def test_coverage_block_in_report_and_md(ws):
             return x
     """), encoding="utf-8")
     importlib.invalidate_caches()
-    retrace.wrap("v11cov", "f")
-    retrace.start_recording(str(ws / "traces"))
+    nodrift.wrap("v11cov", "f")
+    nodrift.start_recording(str(ws / "traces"))
     try:
         module = importlib.import_module("v11cov")
         module.f(1)
@@ -125,7 +125,7 @@ def test_coverage_block_in_report_and_md(ws):
         except ValueError:
             pass
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
     result = replay_all(str(ws / "traces"), {"v11cov": "v11cov"}, Config())
     report = report_mod.build_report(result.to_dict(), "traces",
                                      {"v11cov": "v11cov"})

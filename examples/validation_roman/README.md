@@ -1,12 +1,12 @@
 # Validation: `roman` (github.com/zopefoundation/roman)
 
 Roman-numeral conversion with custom exception types — validates that
-Retrace treats exception *types and messages* as first-class behavior.
+NoDrift treats exception *types and messages* as first-class behavior.
 
 ```bash
 pip install roman
-retrace record --include roman -o traces -- python run_scenarios.py
-retrace replay -t traces
+nodrift record --include roman -o traces -- python run_scenarios.py
+nodrift replay -t traces
 ```
 
 `run_scenarios.py` sweeps `toRoman` over -5..5050 plus non-integer inputs,

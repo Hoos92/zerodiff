@@ -1,4 +1,4 @@
-"""Render replay results as retrace-report.json (agents) and .md (humans).
+"""Render replay results as nodrift-report.json (agents) and .md (humans).
 
 Product invariant: reports state "matched N of M recorded behaviors" and
 never claim unqualified equivalence. Weak matches and skipped traces are
@@ -9,8 +9,8 @@ import datetime
 import json
 from typing import Any, Dict
 
-REPORT_JSON = "retrace-report.json"
-REPORT_MD = "retrace-report.md"
+REPORT_JSON = "nodrift-report.json"
+REPORT_MD = "nodrift-report.md"
 
 
 def build_report(result_dict: Dict[str, Any], trace_dir: str,
@@ -28,7 +28,7 @@ def build_report(result_dict: Dict[str, Any], trace_dir: str,
         if summary.get("replayed") else 0.0,
     }
     return {
-        "retrace_report": 1,
+        "nodrift_report": 1,
         "generated_at": datetime.datetime.now(
             datetime.timezone.utc).isoformat(),
         "trace_dir": trace_dir,
@@ -62,7 +62,7 @@ def write_reports(report: Dict[str, Any], json_path: str = REPORT_JSON,
 def render_markdown(report: Dict[str, Any]) -> str:
     s = report["summary"]
     lines = []
-    lines.append("# Retrace report")
+    lines.append("# NoDrift report")
     lines.append("")
     lines.append("**Result: {} of {} replayed behaviors matched.**".format(
         s["matched"], s["replayed"]))
@@ -128,7 +128,7 @@ def render_markdown(report: Dict[str, Any]) -> str:
         overflow = len(report["divergences"]) - len(shown)
         if overflow > 0:
             lines.append("_Showing the first {} divergences; {} more in "
-                         "retrace-report.json._".format(len(shown),
+                         "nodrift-report.json._".format(len(shown),
                                                         overflow))
             lines.append("")
         by_boundary = {}
@@ -192,11 +192,11 @@ def render_junit(report: Dict[str, Any]) -> str:
                     % (quoteattr("%d recorded behaviors diverged"
                                  % b["diverged"]),
                        escape("\n".join(lines))))
-        cases.append('<testcase classname="retrace" name=%s>%s</testcase>'
+        cases.append('<testcase classname="nodrift" name=%s>%s</testcase>'
                      % (quoteattr(target), body))
 
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<testsuite name="retrace" tests="%d" failures="%d">'
+            '<testsuite name="nodrift" tests="%d" failures="%d">'
             "%s</testsuite>\n"
             % (len(s["boundaries"]),
                sum(1 for t in by_boundary if by_boundary[t]),

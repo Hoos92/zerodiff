@@ -5,7 +5,7 @@ most often introduces, and blocks the loop until they're gone. Findings
 have severities: **error** findings block (the loop won't go green);
 **warn** findings are reported and handed to the agent but don't block.
 
-Honesty note (same rules as the rest of Retrace): static analysis proves
+Honesty note (same rules as the rest of NoDrift): static analysis proves
 the absence of *these specific patterns*, not the absence of all
 vulnerabilities. The gate complements behavioral verification; neither
 replaces security review for high-stakes code.
@@ -245,11 +245,11 @@ def _max_nesting(fn_node) -> int:
 
 
 _INLINE_IGNORE_RE = re.compile(
-    r"#\s*retrace-quality:\s*ignore\[([a-z\-, ]+)\]")
+    r"#\s*nodrift-quality:\s*ignore\[([a-z\-, ]+)\]")
 
 
 def _inline_ignores(source: str) -> Dict[int, set]:
-    """`# retrace-quality: ignore[rule]` suppresses that rule on that line
+    """`# nodrift-quality: ignore[rule]` suppresses that rule on that line
     -- visible in the diff, reviewable, unlike a global disable."""
     ignores = {}
     for lineno, line in enumerate(source.splitlines(), 1):

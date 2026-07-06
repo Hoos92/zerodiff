@@ -1,4 +1,4 @@
-"""`retrace init` and `retrace demo` — the 60-second on-ramp."""
+"""`nodrift init` and `nodrift demo` — the 60-second on-ramp."""
 
 import os
 import subprocess
@@ -7,8 +7,8 @@ import tempfile
 import textwrap
 
 CONFIG_TEMPLATE = """\
-# retrace.toml -- behavioral verification config
-# Docs: https://github.com/Hoos92/retrace
+# nodrift.toml -- behavioral verification config
+# Docs: https://github.com/Hoos92/nodrift
 
 [map]
 # Where recorded boundaries should be replayed. old prefix = new prefix:
@@ -30,34 +30,34 @@ CONFIG_TEMPLATE = """\
 # disable = ["weak-hash"]
 """
 
-GITIGNORE_LINES = ["traces/", "retrace-report.json", "retrace-report.md",
-                   ".retrace/"]
+GITIGNORE_LINES = ["traces/", "nodrift-report.json", "nodrift-report.md",
+                   ".nodrift/"]
 
 NEXT_STEPS = """\
-retrace: initialized.
+nodrift: initialized.
 
 Next steps:
   1. record what your code really does (no source edits needed):
-       retrace record --include yourmodule -o traces -- python your_driver.py
-  2. add the old->new mapping to retrace.toml under [map]
+       nodrift record --include yourmodule -o traces -- python your_driver.py
+  2. add the old->new mapping to nodrift.toml under [map]
   3. verify the rewrite:
-       retrace replay -t traces
+       nodrift replay -t traces
   4. gate it forever -- in your test suite:
-       from retrace.testing import verify_traces
+       from nodrift.testing import verify_traces
        def test_behavior(): verify_traces()
 
-Try `retrace demo` for a 30-second guided example.
+Try `nodrift demo` for a 30-second guided example.
 """
 
 
 def cmd_init(directory: str = ".") -> int:
-    config_path = os.path.join(directory, "retrace.toml")
+    config_path = os.path.join(directory, "nodrift.toml")
     if os.path.exists(config_path):
-        print("retrace: retrace.toml already exists; leaving it untouched")
+        print("nodrift: nodrift.toml already exists; leaving it untouched")
     else:
         with open(config_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(CONFIG_TEMPLATE)
-        print("retrace: wrote retrace.toml")
+        print("nodrift: wrote nodrift.toml")
 
     gitignore_path = os.path.join(directory, ".gitignore")
     existing = ""
@@ -69,16 +69,16 @@ def cmd_init(directory: str = ".") -> int:
         with open(gitignore_path, "a", encoding="utf-8", newline="\n") as f:
             if existing and not existing.endswith("\n"):
                 f.write("\n")
-            f.write("# retrace: traces can contain real runtime data\n")
+            f.write("# nodrift: traces can contain real runtime data\n")
             f.write("\n".join(missing) + "\n")
-        print("retrace: updated .gitignore (%s)" % ", ".join(missing))
+        print("nodrift: updated .gitignore (%s)" % ", ".join(missing))
 
     print()
     print(NEXT_STEPS)
     return 0
 
 
-# --- retrace demo -----------------------------------------------------------
+# --- nodrift demo -----------------------------------------------------------
 
 DEMO_LEGACY = """\
 def apply_discount(order_total, code):
@@ -121,21 +121,21 @@ DEMO_TOML = """\
 
 
 def cmd_demo() -> int:
-    print("retrace demo: a legacy function, a modernized rewrite, and the")
+    print("nodrift demo: a legacy function, a modernized rewrite, and the")
     print("question that matters: does the rewrite behave the same?")
     print()
-    demo_dir = tempfile.mkdtemp(prefix="retrace-demo-")
+    demo_dir = tempfile.mkdtemp(prefix="nodrift-demo-")
     files = {"demo_legacy.py": DEMO_LEGACY,
              "demo_rewrite.py": DEMO_REWRITE_BUGGY,
              "demo_driver.py": DEMO_DRIVER,
-             "retrace.toml": DEMO_TOML}
+             "nodrift.toml": DEMO_TOML}
     for name, content in files.items():
         with open(os.path.join(demo_dir, name), "w", encoding="utf-8",
                   newline="\n") as f:
             f.write(textwrap.dedent(content))
 
     print("step 1 -- record the legacy code (zero source edits):")
-    print("  $ retrace record --include demo_legacy -o traces "
+    print("  $ nodrift record --include demo_legacy -o traces "
           "-- python demo_driver.py")
     code = _run(demo_dir, "record", "--include", "demo_legacy",
                 "-o", "traces", "--", sys.executable, "demo_driver.py")
@@ -143,7 +143,7 @@ def cmd_demo() -> int:
         return code
     print()
     print("step 2 -- replay against the modernized rewrite:")
-    print("  $ retrace replay -t traces")
+    print("  $ nodrift replay -t traces")
     _run(demo_dir, "replay", "-t", "traces")
     print()
     print("The rewrite LOOKED fine -- it 'improved' an error message, and")
@@ -151,11 +151,11 @@ def cmd_demo() -> int:
     print("production. That's what recorded behavior catches.")
     print()
     print("demo files and full reports: %s" % demo_dir)
-    print("start on your own code with: retrace init")
+    print("start on your own code with: nodrift init")
     return 0
 
 
 def _run(cwd: str, *args: str) -> int:
-    proc = subprocess.run([sys.executable, "-m", "retrace.cli"] + list(args),
+    proc = subprocess.run([sys.executable, "-m", "nodrift.cli"] + list(args),
                           cwd=cwd)
     return proc.returncode

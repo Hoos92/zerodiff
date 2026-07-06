@@ -1,22 +1,22 @@
-# Retrace GitHub Action
+# NoDrift GitHub Action
 
 Gates pull requests on recorded behavior: if any recorded behavior of the
 original code diverges in the PR's code, the check fails and the full
 divergence report lands in the job summary.
 
 ```yaml
-# .github/workflows/retrace.yml
+# .github/workflows/nodrift.yml
 name: behavioral-gate
 on: [pull_request]
 jobs:
-  retrace:
+  nodrift:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: Hoos92/retrace/integrations/github-action@main
+      - uses: Hoos92/nodrift/integrations/github-action@main
         with:
           traces-dir: traces
           map: "billing:billing_v2"

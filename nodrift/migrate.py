@@ -1,6 +1,6 @@
-"""`retrace migrate` — the whole verified migration in one command.
+"""`nodrift migrate` — the whole verified migration in one command.
 
-    retrace migrate \
+    nodrift migrate \
         --include billing.pricing \
         --driver "python run_scenarios.py" \
         --map billing.pricing:pricing_v2 \
@@ -12,7 +12,7 @@ rewrite module with stubs for every recorded boundary, (3) drive the agent
 of your choice through the replay-fix loop until every recorded behavior
 matches, (4) optionally sign a tamper-evident attestation of the result.
 
-Retrace stays the judge throughout: the agent (any CLI you name) writes
+NoDrift stays the judge throughout: the agent (any CLI you name) writes
 the code; verification is deterministic and contains no model.
 """
 
@@ -28,7 +28,7 @@ from .loop import run_loop
 from .replayer import map_target
 
 STUB_HEADER = '''\
-"""Rewrite target scaffolded by `retrace migrate`.
+"""Rewrite target scaffolded by `nodrift migrate`.
 
 Implement each function below so its behavior matches the recorded
 behavior of the original exactly -- including exception types, messages,
@@ -112,11 +112,11 @@ def cmd_migrate(args) -> int:
     try:
         runner = make_runner(args, cfg)
     except ValueError as exc:
-        print("retrace migrate: error: %s" % exc, file=sys.stderr)
+        print("nodrift migrate: error: %s" % exc, file=sys.stderr)
         return EXIT_ERROR
     if not mappings:
-        print("retrace migrate: error: no mapping given -- add --map "
-              "OLD:NEW or a [map] section in retrace.toml",
+        print("nodrift migrate: error: no mapping given -- add --map "
+              "OLD:NEW or a [map] section in nodrift.toml",
               file=sys.stderr)
         return EXIT_ERROR
 
@@ -124,35 +124,35 @@ def cmd_migrate(args) -> int:
     have_traces = os.path.isdir(args.traces) and any(
         name.endswith(".jsonl") for name in os.listdir(args.traces))
     if have_traces and args.skip_record:
-        print("retrace migrate: [1/4] using existing traces in %s"
+        print("nodrift migrate: [1/4] using existing traces in %s"
               % args.traces)
     else:
         if not args.driver:
-            print("retrace migrate: error: no --driver given and no "
+            print("nodrift migrate: error: no --driver given and no "
                   "existing traces to reuse (or pass --skip-record with "
                   "recorded traces)", file=sys.stderr)
             return EXIT_ERROR
-        print("retrace migrate: [1/4] recording real behavior...")
-        record_cmd = [sys.executable, "-m", "retrace.cli", "record",
+        print("nodrift migrate: [1/4] recording real behavior...")
+        record_cmd = [sys.executable, "-m", "nodrift.cli", "record",
                       "-o", args.traces]
         for pattern in args.include:
             record_cmd += ["--include", pattern]
         record_cmd += ["--"] + shlex.split(args.driver)
         if subprocess.run(record_cmd).returncode != 0:
-            print("retrace migrate: recording failed", file=sys.stderr)
+            print("nodrift migrate: recording failed", file=sys.stderr)
             return EXIT_ERROR
 
     # step 2: scaffold rewrite stubs
     created = scaffold_rewrites(args.traces, mappings, workdir)
     if created:
-        print("retrace migrate: [2/4] scaffolded rewrite stubs: %s"
+        print("nodrift migrate: [2/4] scaffolded rewrite stubs: %s"
               % ", ".join(created))
     else:
-        print("retrace migrate: [2/4] rewrite modules already exist; "
+        print("nodrift migrate: [2/4] rewrite modules already exist; "
               "the loop will converge them")
 
     # step 3: the agent loop (always isolated; edits re-import fresh)
-    print("retrace migrate: [3/4] driving the agent until every recorded "
+    print("nodrift migrate: [3/4] driving the agent until every recorded "
           "behavior matches...")
     remaining = run_loop(args.traces, mappings, cfg,
                          max_iters=args.max_iters, timeout=args.timeout,
@@ -163,15 +163,15 @@ def cmd_migrate(args) -> int:
                                                1800.0),
                          runner=runner)
     if remaining > 0:
-        print("retrace migrate: FAILED -- %d divergences remain after %d "
-              "iterations (see retrace-report.md)"
+        print("nodrift migrate: FAILED -- %d divergences remain after %d "
+              "iterations (see nodrift-report.md)"
               % (remaining, args.max_iters))
         return EXIT_DIVERGED
 
     # step 4: attestation (optional)
     if args.attest:
         if not args.key_file:
-            print("retrace migrate: error: --attest requires --key-file",
+            print("nodrift migrate: error: --attest requires --key-file",
                   file=sys.stderr)
             return EXIT_ERROR
         from .enterprise import ATTESTATION_FILE, build_attestation
@@ -184,15 +184,15 @@ def cmd_migrate(args) -> int:
                   newline="\n") as f:
             json_mod.dump(attestation, f, indent=2)
             f.write("\n")
-        print("retrace migrate: [4/4] signed attestation -> %s"
+        print("nodrift migrate: [4/4] signed attestation -> %s"
               % ATTESTATION_FILE)
     else:
-        print("retrace migrate: [4/4] done (no attestation requested; "
+        print("nodrift migrate: [4/4] done (no attestation requested; "
               "add --attest --key-file KEY for signed evidence)")
 
     print()
-    print("retrace migrate: SUCCESS -- every recorded behavior matches.")
-    print("  evidence: retrace-report.md / retrace-report.json")
-    print("  keep it verified: add retrace.testing.verify_traces() to "
+    print("nodrift migrate: SUCCESS -- every recorded behavior matches.")
+    print("  evidence: nodrift-report.md / nodrift-report.json")
+    print("  keep it verified: add nodrift.testing.verify_traces() to "
           "your test suite")
     return EXIT_MATCHED

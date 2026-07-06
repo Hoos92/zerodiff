@@ -3,18 +3,18 @@ enterprise-grade complexity: three modules, a custom exception hierarchy
 (InvalidFormat/InvalidLength/InvalidChecksum/InvalidComponent), and IBAN
 country rules.
 
-Driven through `retrace migrate` (see README.md).
+Driven through `nodrift migrate` (see README.md).
 """
 
-import retrace
+import nodrift
 
 for fn in ("validate", "checksum", "calc_check_digit", "is_valid"):
-    retrace.wrap("stdnum.luhn", fn)
+    nodrift.wrap("stdnum.luhn", fn)
 for fn in ("validate", "compact", "isbn_type", "to_isbn13", "to_isbn10",
            "is_valid"):
-    retrace.wrap("stdnum.isbn", fn)
+    nodrift.wrap("stdnum.isbn", fn)
 for fn in ("validate", "compact", "calc_check_digits", "is_valid"):
-    retrace.wrap("stdnum.iban", fn)
+    nodrift.wrap("stdnum.iban", fn)
 
 from stdnum import iban, isbn, luhn  # noqa: E402
 

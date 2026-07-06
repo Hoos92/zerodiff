@@ -1,4 +1,4 @@
-"""Isolated replay worker: ``python -m retrace.worker``.
+"""Isolated replay worker: ``python -m nodrift.worker``.
 
 Speaks a JSON-lines protocol on its original stdout while user code's prints
 are diverted to stderr, so a chatty rewrite can't corrupt the protocol.

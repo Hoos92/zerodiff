@@ -1,7 +1,7 @@
 """One-line behavioral gating inside any test suite.
 
     # test_behavior.py
-    from retrace.testing import verify_traces
+    from nodrift.testing import verify_traces
 
     def test_rewrite_matches_recorded_behavior():
         verify_traces("traces")
@@ -30,7 +30,7 @@ class BehaviorMismatch(AssertionError):
 def _digest(report: Dict[str, Any]) -> str:
     s = report["summary"]
     lines = ["%d of %d recorded behaviors diverged "
-             "(full report: retrace-report.md)"
+             "(full report: nodrift-report.md)"
              % (s["diverged"], s["replayed"])]
     for d in report["divergences"][:MAX_DIGEST_LINES]:
         lines.append("  [%s] %s at %s (input %s): expected %s, got %s"

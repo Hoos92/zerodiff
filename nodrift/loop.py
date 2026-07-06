@@ -2,8 +2,8 @@
 
 Vendor-neutral by design. The agent is any shell command:
 
-    retrace loop -t traces --agent "claude -p --permission-mode acceptEdits"
-    retrace loop -t traces --agent "codex exec --full-auto {prompt_file}"
+    nodrift loop -t traces --agent "claude -p --permission-mode acceptEdits"
+    nodrift loop -t traces --agent "codex exec --full-auto {prompt_file}"
 
 If the command contains ``{prompt_file}``, the path of a file holding the
 fix prompt is substituted; otherwise the prompt is piped to the agent's
@@ -23,7 +23,7 @@ MAX_PROMPT_DIVERGENCES = 40
 
 PROMPT_HEADER = """\
 You are fixing a rewrite so it behaves exactly like the original code it
-replaces. A behavioral verification tool (Retrace) replayed recorded
+replaces. A behavioral verification tool (NoDrift) replayed recorded
 real-world calls of the original against the rewrite and found divergences.
 
 Rules:
@@ -31,7 +31,7 @@ Rules:
 - Behavior must match the original exactly, including exception types,
   exception messages, and returned value types -- even where the original's
   behavior looks wrong. Do not "improve" behavior.
-- Never modify the traces directory, retrace.toml, or the report files.
+- Never modify the traces directory, nodrift.toml, or the report files.
 - Do not re-run the verification yourself; the loop does that.
 
 Secure & quality coding rules (statically enforced -- the loop will not
@@ -169,17 +169,17 @@ class ShellAgent:
 
 def run_agent(agent_cmd: str, prompt: str, workdir: str,
               agent_timeout: float = 1800.0) -> int:
-    prompt_file = os.path.join(workdir, "retrace-fix-prompt.md")
+    prompt_file = os.path.join(workdir, "nodrift-fix-prompt.md")
     with open(prompt_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(prompt)
     try:
         # the user's --agent value IS a shell command by contract
         if "{prompt_file}" in agent_cmd:
             cmd = agent_cmd.replace("{prompt_file}", prompt_file)
-            proc = subprocess.run(cmd, shell=True, cwd=workdir,  # retrace-quality: ignore[shell-injection]
+            proc = subprocess.run(cmd, shell=True, cwd=workdir,  # nodrift-quality: ignore[shell-injection]
                                   timeout=agent_timeout)
         else:
-            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,  # retrace-quality: ignore[shell-injection]
+            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,  # nodrift-quality: ignore[shell-injection]
                                   input=prompt.encode("utf-8"),
                                   timeout=agent_timeout)
     except subprocess.TimeoutExpired:
@@ -235,19 +235,19 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         blocking = quality_mod.error_count(findings)
         remaining = divergences + blocking
 
-        print("retrace loop: iteration %d: %d of %d matched, "
+        print("nodrift loop: iteration %d: %d of %d matched, "
               "%d divergences, %d blocking quality findings"
               % (iteration, report["summary"]["matched"],
                  report["summary"]["replayed"], divergences, blocking))
         if remaining == 0:
             if findings:  # non-blocking warnings still worth surfacing
-                print("retrace loop: quality warnings (non-blocking):")
+                print("nodrift loop: quality warnings (non-blocking):")
                 print(quality_mod.render_text(findings))
             return 0
 
         fingerprint = _fingerprint(report, blocking)
         if fingerprint in recent_fingerprints[-3:]:
-            print("retrace loop: agent is stalled or cycling (this exact "
+            print("nodrift loop: agent is stalled or cycling (this exact "
                   "problem set was already seen); stopping early after "
                   "%d iterations to avoid burning agent spend"
                   % iteration)
@@ -256,16 +256,16 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
 
         if iteration == max_iters:
             break
-        print("retrace loop: invoking agent...")
+        print("nodrift loop: invoking agent...")
         code = runner.run(
             build_prompt(report, findings, files=files,
                          iteration=iteration, max_iters=max_iters,
                          originals=originals),
             files, workdir)
         if code == AGENT_TIMED_OUT:
-            print("retrace loop: agent timed out after %ds; stopping"
+            print("nodrift loop: agent timed out after %ds; stopping"
                   % agent_timeout)
             break
         if code != 0:
-            print("retrace loop: warning: agent exited with code %d" % code)
+            print("nodrift loop: warning: agent exited with code %d" % code)
     return remaining

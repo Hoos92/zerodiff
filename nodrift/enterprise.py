@@ -1,6 +1,6 @@
-"""Retrace Enterprise: signed evidence and replay history.
+"""NoDrift Enterprise: signed evidence and replay history.
 
-Copyright (c) 2026 Retrace. This module is source-available for evaluation
+Copyright (c) 2026 NoDrift. This module is source-available for evaluation
 and non-production use; production use requires a commercial license.
 See COMMERCIAL.md. The rest of the package is MIT-licensed.
 """
@@ -14,15 +14,15 @@ from typing import Any, Dict, List, Optional
 
 from .serializer import canonical_json
 
-HISTORY_DIR = ".retrace"
+HISTORY_DIR = ".nodrift"
 HISTORY_FILE = "history.jsonl"
-ATTESTATION_FILE = "retrace-attestation.json"
-_LICENSE_ENV = "RETRACE_LICENSE"
+ATTESTATION_FILE = "nodrift-attestation.json"
+_LICENSE_ENV = "NODRIFT_LICENSE"
 
 
 def _license_notice() -> None:
     if not os.environ.get(_LICENSE_ENV):
-        print("retrace: evaluation mode -- Retrace Enterprise features "
+        print("nodrift: evaluation mode -- NoDrift Enterprise features "
               "(attest, history) require a commercial license for "
               "production use; see COMMERCIAL.md")
 
@@ -42,11 +42,11 @@ def _load_key(key_file: Optional[str]) -> bytes:
         with open(key_file, "rb") as f:
             key = f.read().strip()
     else:
-        key = os.environ.get("RETRACE_ATTEST_KEY", "").strip().encode(
+        key = os.environ.get("NODRIFT_ATTEST_KEY", "").strip().encode(
             "utf-8")
         if not key:
             raise ValueError("no signing key: pass --key-file or set "
-                             "RETRACE_ATTEST_KEY")
+                             "NODRIFT_ATTEST_KEY")
     if len(key) < 16:
         raise ValueError("attestation key must be at least 16 bytes")
     return key
@@ -110,7 +110,7 @@ def build_attestation(trace_dir: str, report_path: str, key_file: str,
         body["quality"] = {
             "errors": errors,
             "warnings": len(findings) - errors,
-            "ruleset": "retrace-" + __version__,
+            "ruleset": "nodrift-" + __version__,
         }
     commit = _git_commit()
     if commit:
@@ -180,7 +180,7 @@ def append_history(report: Dict[str, Any], directory: str = ".") -> str:
 def show_history(directory: str = ".", limit: int = 20) -> int:
     path = os.path.join(directory, HISTORY_DIR, HISTORY_FILE)
     if not os.path.exists(path):
-        print("retrace: no history yet (run replay with --history)")
+        print("nodrift: no history yet (run replay with --history)")
         return 1
     with open(path, "r", encoding="utf-8") as f:
         entries = [json.loads(line) for line in f if line.strip()]

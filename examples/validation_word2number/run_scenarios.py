@@ -1,12 +1,12 @@
 """Exercises word2number (github.com/akshaynagpal/w2n) — simple complexity:
 one function, but a decade of accumulated parsing quirks.
 
-    retrace record -o traces -- python run_scenarios.py
+    nodrift record -o traces -- python run_scenarios.py
 """
 
-import retrace
+import nodrift
 
-retrace.wrap("word2number.w2n", "word_to_num")
+nodrift.wrap("word2number.w2n", "word_to_num")
 
 from word2number import w2n  # noqa: E402
 

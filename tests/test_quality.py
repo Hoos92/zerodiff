@@ -6,10 +6,10 @@ import textwrap
 
 import pytest
 
-import retrace
-from retrace import quality
-from retrace.config import Config, _parse_toml_subset
-from retrace.loop import run_loop
+import nodrift
+from nodrift import quality
+from nodrift.config import Config, _parse_toml_subset
+from nodrift.loop import run_loop
 
 
 def _rules(source, **kwargs):
@@ -147,12 +147,12 @@ class TestLoopEnforcement:
             "def calc(expr_a, expr_b):\n    return expr_a + expr_b\n",
             encoding="utf-8")
         importlib.invalidate_caches()
-        retrace.wrap("qleg_a", "calc")
-        retrace.start_recording(str(tmp_path / "traces"))
+        nodrift.wrap("qleg_a", "calc")
+        nodrift.start_recording(str(tmp_path / "traces"))
         try:
             importlib.import_module("qleg_a").calc(2, 3)
         finally:
-            retrace.stop_recording()
+            nodrift.stop_recording()
 
         # behaviorally CORRECT but insecure rewrite (uses eval)
         (tmp_path / "qnew_a.py").write_text(
@@ -184,12 +184,12 @@ class TestLoopEnforcement:
         (tmp_path / "qleg_b.py").write_text(
             "def f(x):\n    return x\n", encoding="utf-8")
         importlib.invalidate_caches()
-        retrace.wrap("qleg_b", "f")
-        retrace.start_recording(str(tmp_path / "traces"))
+        nodrift.wrap("qleg_b", "f")
+        nodrift.start_recording(str(tmp_path / "traces"))
         try:
             importlib.import_module("qleg_b").f(7)
         finally:
-            retrace.stop_recording()
+            nodrift.stop_recording()
         (tmp_path / "qnew_b.py").write_text(
             'def f(x):\n    return eval("%d" % x)\n', encoding="utf-8")
 

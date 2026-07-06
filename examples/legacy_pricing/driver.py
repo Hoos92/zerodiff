@@ -1,16 +1,16 @@
-"""Driver using explicit instrumentation (retrace.wrap; no source edits to
+"""Driver using explicit instrumentation (nodrift.wrap; no source edits to
 the legacy module). Run via:
 
-    retrace record -o traces -- python driver.py
+    nodrift record -o traces -- python driver.py
 
 For the fully zero-edit alternative, see scenarios.py with --include.
 """
 
-import retrace
+import nodrift
 
-retrace.wrap("pricing", "calc_price")
-retrace.wrap("pricing", "validate_coupon")
-retrace.wrap("pricing", "tier_discount")
+nodrift.wrap("pricing", "calc_price")
+nodrift.wrap("pricing", "validate_coupon")
+nodrift.wrap("pricing", "tier_discount")
 
 from scenarios import main  # noqa: E402  (wrap before pricing is used)
 

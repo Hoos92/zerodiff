@@ -1,8 +1,17 @@
 # Changelog
 
+
+## 0.12.0 — 2026-07-06 (rename: Retrace -> NoDrift)
+
+- the product is now **NoDrift** (package `nodrift`, CLI `nodrift`,
+  config `nodrift.toml`, env vars `NODRIFT_*`, reports `nodrift-report.*`)
+  after an availability sweep found the old name collided with a funded
+  dental-AI company at retrace.ai and an adjacent agent-replay product
+  at retraceai.tech
+- no behavior changes; full suite green before and after
 ## 0.11.0 — 2026-07-05 (guard, coverage confidence, class ergonomics)
 
-- `retrace guard baseline` / `retrace guard check`: the dependency-
+- `nodrift guard baseline` / `nodrift guard check`: the dependency-
   upgrade safety net -- record before upgrading, replay after; identity
   mapping on purpose (the upgraded package lives behind the same names)
 - coverage confidence in every report: boundaries, distinct behaviors,
@@ -10,15 +19,15 @@
   error paths
 - class ergonomics: dataclass and Enum values now RECONSTRUCT at replay
   when their class is importable (methods taking/returning dataclasses
-  become fully replayable); `retrace.record_class()` instruments a
+  become fully replayable); `nodrift.record_class()` instruments a
   class's public/static/class methods; `wrap()` accepts "Class.method"
-- `retrace insights --json`; examples/ index README
+- `nodrift insights --json`; examples/ index README
 
 ## 0.10.2 — 2026-07-05 (cold-clone audit)
 
-- packaging version is now single-sourced from `retrace.__version__`
+- packaging version is now single-sourced from `nodrift.__version__`
   (pip metadata had been stuck at 0.1.0 since the first release)
-- README documents `retrace insights`; changelog backfilled for 0.10.1
+- README documents `nodrift insights`; changelog backfilled for 0.10.1
 - audit verified from a fresh GitHub clone: 168 tests, demo, pricing
   example (good + buggy + insights), stdnum committed rewrites 269/269,
   attest/verify/history, MCP tools/list — all green with zero setup
@@ -35,13 +44,13 @@
 
 ## 0.10.0 — 2026-07-05 (self-improvement loops + live cohort)
 
-- `retrace insights`: mines your report and history locally into
+- `nodrift insights`: mines your report and history locally into
   concrete next actions (adapters for weak comparisons, float_tolerance
   for numeric noise, hot boundaries, attest/CI habits after a green
   streak, regression pointer to the last green commit)
 - inline quality suppressions with an audit trail:
-  `# retrace-quality: ignore[rule]` on the flagged line
-- CI now dogfoods the quality gate on Retrace's own source
+  `# nodrift-quality: ignore[rule]` on the flagged line
+- CI now dogfoods the quality gate on NoDrift's own source
 - resolver diagnostics: a rewrite module that exists but fails to import
   (relative imports, missing deps) now surfaces the actual import error
   in the missing_boundary hint; agent prompt + scaffold demand
@@ -73,12 +82,12 @@
   LLM directly (anthropic / openai / openai-compatible with
   `--llm-base-url` for Ollama, OpenRouter, vLLM, Gemini-compat); zero
   dependencies (stdlib urllib), keys from standard env vars, `[agent]`
-  config in retrace.toml
+  config in nodrift.toml
 - the built-in agent is least-privilege by design: no shell, no tools,
   output protocol is full-file sentinel blocks, writes restricted to the
   allowlisted rewrite files (path traversal rejected), and everything it
   writes still passes the quality gate and replay
-- `retrace llm-check`: validate key/model/endpoint with one tiny
+- `nodrift llm-check`: validate key/model/endpoint with one tiny
   round-trip before burning a real run
 - 161 tests (stub LLM server, no network in CI)
 
@@ -91,19 +100,19 @@
   were encoded *after* the call (a mutating original recorded its mutated
   inputs as the inputs). Opt out with `[record] mutations = false`
 - **stateful code support**: `meta.seq` global chronology on every trace;
-  `retrace replay --in-order` replays every call (no dedup) in recorded
+  `nodrift replay --in-order` replays every call (no dedup) in recorded
   order
 - **agent-loop economics**: stall detection (identical problems two
   iterations running → stop early), `--agent-timeout` (default 1800s),
   and prompts now name the rewrite files and the attempt number
 - **parallel replay**: `--jobs N` shards across isolated workers
   (verified identical counts to serial on 10k behaviors)
-- **coherence**: MCP server gained `retrace_quality`; attestations with
+- **coherence**: MCP server gained `nodrift_quality`; attestations with
   `--code` now embed the quality-gate outcome in the signed body and
-  accept `RETRACE_ATTEST_KEY`; reports flag Python-version drift between
+  accept `NODRIFT_ATTEST_KEY`; reports flag Python-version drift between
   record and replay
 - robustness: markdown reports cap at 100 divergences; unreadable files
-  become gate findings; `retrace init` template includes `[quality]`
+  become gate findings; `nodrift init` template includes `[quality]`
 
 ## 0.7.0 — 2026-07-04
 
@@ -112,41 +121,41 @@
   secrets, unsafe deserialization, disabled TLS verification, insecure
   tempfiles; warns on weak hashes, exception-swallowing, mutable
   defaults, and length/complexity/nesting budget violations
-- enforced in `retrace loop` / `retrace migrate` by default (findings are
+- enforced in `nodrift loop` / `nodrift migrate` by default (findings are
   appended to the agent's fix prompt; the loop won't go green while
   blocking findings remain; `--no-quality` opts out); standalone
-  `retrace quality FILE...`; budgets configurable via `[quality]` in
-  retrace.toml
+  `nodrift quality FILE...`; budgets configurable via `[quality]` in
+  nodrift.toml
 - secure-coding rules embedded in every agent fix prompt
 
 ## 0.6.0 — 2026-07-04
 
-- `retrace replay` warns loudly when no `[map]` entry applied to any
+- `nodrift replay` warns loudly when no `[map]` entry applied to any
   boundary (you were replaying the original against itself)
-- attestations can pin rewrite source files (`retrace attest --code FILE`)
+- attestations can pin rewrite source files (`nodrift attest --code FILE`)
   and record the git commit; `verify-attestation` checks code digests too
-- `retrace history` entries record the git commit
+- `nodrift history` entries record the git commit
 - new complex validation: python-stdnum (luhn/isbn/iban) through the full
-  `retrace migrate` pipeline end to end
+  `nodrift migrate` pipeline end to end
 - repo governance: CHANGELOG, SECURITY.md, CONTRIBUTING.md, CI workflow
 
 ## 0.5.0 — 2026-07-04
 
-- `retrace migrate`: the whole verified migration in one command — record
+- `nodrift migrate`: the whole verified migration in one command — record
   → scaffold rewrite stubs from recorded boundaries → drive any agent CLI
   through the replay-fix loop → optional signed attestation
 
 ## 0.4.0 — 2026-07-04
 
-- free tier: `retrace init`, `retrace demo`, `retrace.testing.verify_traces()`
-  pytest one-liner, `retrace replay --junit-out`
-- Enterprise (COMMERCIAL.md): `retrace attest` / `verify-attestation`
-  (HMAC-signed tamper-evident evidence), `retrace history`
+- free tier: `nodrift init`, `nodrift demo`, `nodrift.testing.verify_traces()`
+  pytest one-liner, `nodrift replay --junit-out`
+- Enterprise (COMMERCIAL.md): `nodrift attest` / `verify-attestation`
+  (HMAC-signed tamper-evident evidence), `nodrift history`
 
 ## 0.3.0 — 2026-07-03
 
-- `retrace loop`: unattended replay→agent→replay loop for any agent CLI
-- `retrace mcp`: zero-dependency MCP server (Claude Code, Codex, Copilot,
+- `nodrift loop`: unattended replay→agent→replay loop for any agent CLI
+- `nodrift mcp`: zero-dependency MCP server (Claude Code, Codex, Copilot,
   Cursor)
 - GitHub Action and Claude Code hook integrations
 

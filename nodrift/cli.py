@@ -1,7 +1,7 @@
-"""The retrace command line: record | replay | report.
+"""The nodrift command line: record | replay | report.
 
 Exit codes: 0 = every replayed behavior matched, 1 = divergences found,
-2 = harness/usage error. This makes retrace usable directly as a CI gate or
+2 = harness/usage error. This makes nodrift usable directly as a CI gate or
 inside an agent feedback loop.
 """
 
@@ -25,11 +25,11 @@ EXIT_ERROR = 2
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="retrace",
+        prog="nodrift",
         description="Behavioral equivalence harness: record real behavior, "
                     "replay it against a rewrite, report every divergence.")
     parser.add_argument("--version", action="version",
-                        version="retrace " + __version__)
+                        version="nodrift " + __version__)
     sub = parser.add_subparsers(dest="command")
 
     p_record = sub.add_parser(
@@ -45,8 +45,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                                "sitecustomize via PYTHONPATH, which shadows "
                                "any existing sitecustomize for this run.")
     p_record.add_argument("--config", default=None,
-                          help="retrace.toml for record-time redaction "
-                               "(default: ./retrace.toml if present)")
+                          help="nodrift.toml for record-time redaction "
+                               "(default: ./nodrift.toml if present)")
     p_record.add_argument("cmd", nargs=argparse.REMAINDER,
                           help="command to run, e.g.: -- python driver.py")
 
@@ -58,9 +58,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                           metavar="OLD:NEW",
                           help="map old module/target prefix to new, e.g. "
                                "billing:billing_v2 (repeatable; merged with "
-                               "[map] in retrace.toml)")
+                               "[map] in nodrift.toml)")
     p_replay.add_argument("--config", default=None,
-                          help="path to retrace.toml (default: ./retrace.toml "
+                          help="path to nodrift.toml (default: ./nodrift.toml "
                                "if present)")
     p_replay.add_argument("--isolate", action="store_true",
                           help="replay each call in a worker subprocess; a "
@@ -83,11 +83,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                           help="also write a JUnit XML report (one testcase "
                                "per boundary) for CI systems")
     p_replay.add_argument("--history", action="store_true",
-                          help="append this run to .retrace/history.jsonl "
+                          help="append this run to .nodrift/history.jsonl "
                                "(Enterprise)")
 
     p_report = sub.add_parser(
-        "report", help="render an existing retrace-report.json")
+        "report", help="render an existing nodrift-report.json")
     p_report.add_argument("-i", "--input", default=report_mod.REPORT_JSON)
     p_report.add_argument("--format", choices=["md", "summary"],
                           default="summary")
@@ -133,7 +133,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     sub.add_parser(
         "mcp", help="run the MCP server on stdio (register with: "
-                    "claude mcp add retrace -- retrace mcp)")
+                    "claude mcp add nodrift -- nodrift mcp)")
 
     p_migrate = sub.add_parser(
         "migrate", help="the whole verified migration in one command: "
@@ -146,7 +146,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                                 "e.g. \"python run_scenarios.py\"")
     p_migrate.add_argument("--map", action="append", default=[],
                            metavar="OLD:NEW", help="old:new module mapping "
-                           "(repeatable; merged with retrace.toml [map])")
+                           "(repeatable; merged with nodrift.toml [map])")
     p_migrate.add_argument("--agent", default=None,
                            help="BYO agent CLI that writes/fixes the "
                                 "rewrite; prompt via stdin or "
@@ -174,7 +174,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                            help="kill the agent command after this many "
                                 "seconds (default: 1800)")
 
-    sub.add_parser("init", help="scaffold retrace.toml and .gitignore "
+    sub.add_parser("init", help="scaffold nodrift.toml and .gitignore "
                                 "entries in the current project")
     sub.add_parser("demo", help="30-second guided demo: record a legacy "
                                 "function, catch a rewrite's silent change")
@@ -186,7 +186,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_attest.add_argument("-r", "--report", default=report_mod.REPORT_JSON)
     p_attest.add_argument("--key-file", default=None,
                           help="file containing the team signing key "
-                               "(>=16 bytes; or set RETRACE_ATTEST_KEY)")
+                               "(>=16 bytes; or set NODRIFT_ATTEST_KEY)")
     p_attest.add_argument("--code", action="append", default=[],
                           metavar="FILE",
                           help="also pin a rewrite source file's digest "
@@ -198,7 +198,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                                    "signature and trace digests")
     p_vattest.add_argument("-i", "--input", default=None)
     p_vattest.add_argument("--key-file", default=None,
-                           help="signing key file (or RETRACE_ATTEST_KEY)")
+                           help="signing key file (or NODRIFT_ATTEST_KEY)")
     p_vattest.add_argument("-t", "--traces", default=None,
                            help="also check trace files still match the "
                                 "attested digests")
@@ -223,7 +223,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     guard_sub = p_guard.add_subparsers(dest="stage", required=True)
     pg_base = guard_sub.add_parser("baseline",
                                    help="record current behavior")
-    pg_base.add_argument("-t", "--traces", default=".retrace/guard")
+    pg_base.add_argument("-t", "--traces", default=".nodrift/guard")
     pg_base.add_argument("--include", action="append", default=[],
                          metavar="PATTERN")
     pg_base.add_argument("--config", default=None)
@@ -231,7 +231,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                          help="driver command: -- python x.py")
     pg_check = guard_sub.add_parser("check",
                                     help="replay after the upgrade")
-    pg_check.add_argument("-t", "--traces", default=".retrace/guard")
+    pg_check.add_argument("-t", "--traces", default=".nodrift/guard")
     pg_check.add_argument("--config", default=None)
     pg_check.add_argument("--isolate", action="store_true")
     pg_check.add_argument("--timeout", type=float, default=30.0)
@@ -286,13 +286,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             return _cmd_guard(args)
         return _cmd_report(args)
     except (FileNotFoundError, ValueError) as exc:
-        print("retrace: error: {}".format(exc), file=sys.stderr)
+        print("nodrift: error: {}".format(exc), file=sys.stderr)
         return EXIT_ERROR
 
 
 def make_runner(args: argparse.Namespace, cfg):
     """Resolve the two doors: --agent (BYO CLI) or --llm (built-in).
-    Falls back to [agent] llm in retrace.toml when neither flag is given."""
+    Falls back to [agent] llm in nodrift.toml when neither flag is given."""
     from .loop import ShellAgent
 
     llm_spec = getattr(args, "llm", None) or (
@@ -314,7 +314,7 @@ def make_runner(args: argparse.Namespace, cfg):
             api_key_env=cfg.agent_api_key_env())
     raise ValueError("no agent selected: pass --agent \"<cli command>\" "
                      "or --llm provider:model (or set [agent] llm in "
-                     "retrace.toml)")
+                     "nodrift.toml)")
 
 
 def _cmd_loop(args: argparse.Namespace) -> int:
@@ -333,9 +333,9 @@ def _cmd_loop(args: argparse.Namespace) -> int:
                          agent_timeout=args.agent_timeout,
                          runner=make_runner(args, cfg))
     if remaining == 0:
-        print("retrace loop: all recorded behaviors match")
+        print("nodrift loop: all recorded behaviors match")
         return EXIT_MATCHED
-    print("retrace loop: %d divergences remain after %d iterations"
+    print("nodrift loop: %d divergences remain after %d iterations"
           % (remaining, args.max_iters))
     return EXIT_DIVERGED
 
@@ -345,24 +345,24 @@ def _cmd_record(args: argparse.Namespace) -> int:
     if cmd and cmd[0] == "--":
         cmd = cmd[1:]
     if not cmd:
-        print("retrace: error: no command given. "
-              "Usage: retrace record -o traces -- python driver.py",
+        print("nodrift: error: no command given. "
+              "Usage: nodrift record -o traces -- python driver.py",
               file=sys.stderr)
         return EXIT_ERROR
     trace_dir = os.path.abspath(args.out)
     env = dict(os.environ)
-    env["RETRACE_TRACE_DIR"] = trace_dir
+    env["NODRIFT_TRACE_DIR"] = trace_dir
     if args.config:
-        env["RETRACE_CONFIG"] = os.path.abspath(args.config)
+        env["NODRIFT_CONFIG"] = os.path.abspath(args.config)
 
     boot_dir = None
     if args.include:
         from .autohook import SITECUSTOMIZE
-        boot_dir = tempfile.mkdtemp(prefix="retrace-boot-")
+        boot_dir = tempfile.mkdtemp(prefix="nodrift-boot-")
         with open(os.path.join(boot_dir, "sitecustomize.py"), "w",
                   encoding="utf-8", newline="\n") as f:
             f.write(SITECUSTOMIZE)
-        env["RETRACE_INCLUDE"] = ",".join(args.include)
+        env["NODRIFT_INCLUDE"] = ",".join(args.include)
         existing = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = boot_dir + (
             os.pathsep + existing if existing else "")
@@ -374,17 +374,17 @@ def _cmd_record(args: argparse.Namespace) -> int:
         if boot_dir is not None:
             shutil.rmtree(boot_dir, ignore_errors=True)
     after, boundaries = _count_traces(trace_dir), _count_boundaries(trace_dir)
-    print("retrace: recorded {} calls across {} boundaries -> {}".format(
+    print("nodrift: recorded {} calls across {} boundaries -> {}".format(
         after - before, boundaries, trace_dir))
     if proc.returncode != 0:
-        print("retrace: note: recorded command exited with code {}".format(
+        print("nodrift: note: recorded command exited with code {}".format(
             proc.returncode), file=sys.stderr)
     if after <= before:
-        print("retrace: error: no calls were recorded. Check that the "
+        print("nodrift: error: no calls were recorded. Check that the "
               "command actually exercises the code, and that --include "
               "patterns are module names (e.g. 'billing.pricing'), or "
-              "that boundaries are marked with @retrace.record / "
-              "retrace.wrap().", file=sys.stderr)
+              "that boundaries are marked with @nodrift.record / "
+              "nodrift.wrap().", file=sys.stderr)
         return EXIT_ERROR
     return EXIT_MATCHED
 
@@ -416,7 +416,7 @@ def _parse_map_args(entries: List[str]) -> Dict[str, str]:
 
 
 def _cmd_replay(args: argparse.Namespace) -> int:
-    # the rewrite lives in the user's project, not next to the retrace
+    # the rewrite lives in the user's project, not next to the nodrift
     # script — make the working directory importable like `python x.py` would
     cwd = os.getcwd()
     if cwd not in sys.path:
@@ -443,12 +443,12 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         append_history(report)
 
     s = report["summary"]
-    print("retrace: replayed {} of {} recorded behaviors".format(
+    print("nodrift: replayed {} of {} recorded behaviors".format(
         s["replayed"], s["traces_total"]))
-    print("retrace: matched {}   diverged {}   skipped {}   weak {}".format(
+    print("nodrift: matched {}   diverged {}   skipped {}   weak {}".format(
         s["matched"], s["diverged"], s["skipped_unreplayable"],
         s["weak_matches"]))
-    print("retrace: report -> {} , {}".format(args.json_out, args.md_out))
+    print("nodrift: report -> {} , {}".format(args.json_out, args.md_out))
     if s["divergence_count"] > 0:
         _print_divergence_digest(report)
         return EXIT_DIVERGED
@@ -465,9 +465,9 @@ def _warn_if_unmapped(result, mappings: Dict[str, str]) -> None:
     if not boundaries:
         return
     if all(map_target(b, mappings) == b for b in boundaries):
-        print("retrace: WARNING: no [map] entry applied to any recorded "
+        print("nodrift: WARNING: no [map] entry applied to any recorded "
               "boundary -- you just replayed the original code against "
-              "itself. Add --map OLD:NEW (or [map] in retrace.toml) to "
+              "itself. Add --map OLD:NEW (or [map] in nodrift.toml) to "
               "verify a rewrite.", file=sys.stderr)
 
 
@@ -497,12 +497,12 @@ def _cmd_guard(args: argparse.Namespace) -> int:
     report_mod.write_reports(report)
     s = report["summary"]
     if s["divergence_count"] == 0:
-        print("retrace guard: PASS -- %d of %d recorded behaviors "
+        print("nodrift guard: PASS -- %d of %d recorded behaviors "
               "preserved across the change" % (s["matched"],
                                                s["replayed"]))
         return EXIT_MATCHED
-    print("retrace guard: BEHAVIOR CHANGED -- %d of %d recorded "
-          "behaviors diverged (see retrace-report.md)"
+    print("nodrift guard: BEHAVIOR CHANGED -- %d of %d recorded "
+          "behaviors diverged (see nodrift-report.md)"
           % (s["diverged"], s["replayed"]))
     _print_divergence_digest(report)
     return EXIT_DIVERGED
@@ -520,9 +520,9 @@ def _cmd_llm_check(args: argparse.Namespace) -> int:
                              api_key_env=cfg.agent_api_key_env())
         reply = agent.check()
     except AgentError as exc:
-        print("retrace llm-check: FAILED: %s" % exc)
+        print("nodrift llm-check: FAILED: %s" % exc)
         return EXIT_DIVERGED
-    print("retrace llm-check: OK -- %s responded (%r)"
+    print("nodrift llm-check: OK -- %s responded (%r)"
           % (args.llm, reply))
     return EXIT_MATCHED
 
@@ -535,12 +535,12 @@ def _cmd_quality(args: argparse.Namespace) -> int:
                                        budgets=cfg.quality_budgets(),
                                        disabled=cfg.quality_disabled())
     if not findings:
-        print("retrace quality: no findings in %d file(s)"
+        print("nodrift quality: no findings in %d file(s)"
               % len(args.files))
         return EXIT_MATCHED
     print(quality_mod.render_text(findings))
     errors = quality_mod.error_count(findings)
-    print("retrace quality: %d blocking error(s), %d warning(s)"
+    print("nodrift quality: %d blocking error(s), %d warning(s)"
           % (errors, len(findings) - errors))
     return EXIT_DIVERGED if errors else EXIT_MATCHED
 
@@ -555,8 +555,8 @@ def _cmd_attest(args: argparse.Namespace) -> int:
         json.dump(attestation, f, indent=2)
         f.write("\n")
     body = attestation["body"]
-    print("retrace: attestation written -> %s" % out)
-    print("retrace: verdict %r over %d trace files, key id %s"
+    print("nodrift: attestation written -> %s" % out)
+    print("nodrift: verdict %r over %d trace files, key id %s"
           % (body["verdict"], len(body["traces"]), body["key_id"]))
     return EXIT_MATCHED
 
@@ -567,11 +567,11 @@ def _cmd_verify_attestation(args: argparse.Namespace) -> int:
     problems = verify_attestation(args.input or ATTESTATION_FILE,
                                   args.key_file, trace_dir=args.traces)
     if not problems:
-        print("retrace: attestation verified -- signature and digests "
+        print("nodrift: attestation verified -- signature and digests "
               "check out")
         return EXIT_MATCHED
     for problem in problems:
-        print("retrace: ATTESTATION PROBLEM: %s" % problem)
+        print("nodrift: ATTESTATION PROBLEM: %s" % problem)
     return EXIT_DIVERGED
 
 

@@ -7,7 +7,7 @@ about: Something diverged from documented behavior
 
 **Repro** (commands + minimal module if possible)
 
-**Environment**: OS, Python version, `retrace --version`
+**Environment**: OS, Python version, `nodrift --version`
 
 If verification produced a report, paste the relevant divergence entries
-from `retrace-report.json` (redact any sensitive recorded data first).
+from `nodrift-report.json` (redact any sensitive recorded data first).

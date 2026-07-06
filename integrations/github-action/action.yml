@@ -1,4 +1,4 @@
-name: "Retrace behavioral gate"
+name: "NoDrift behavioral gate"
 description: >-
   Replay recorded behavioral traces against the code in this PR and fail
   the check if any recorded behavior diverged. Works on code written by
@@ -28,10 +28,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install retrace
+    - name: Install nodrift
       shell: bash
-      # once published: pip install retrace-harness
-      run: pip install "retrace-harness @ git+https://github.com/Hoos92/retrace"
+      # once published: pip install nodrift-harness
+      run: pip install "nodrift-harness @ git+https://github.com/Hoos92/nodrift"
     - name: Replay recorded behaviors
       shell: bash
       working-directory: ${{ inputs.workdir }}
@@ -42,13 +42,13 @@ runs:
         for m in "${MAPS[@]}"; do
           [ -n "$m" ] && ARGS+=(--map "$m")
         done
-        retrace replay "${ARGS[@]}"
+        nodrift replay "${ARGS[@]}"
     - name: Upload report
       if: always()
       shell: bash
       working-directory: ${{ inputs.workdir }}
       run: |
-        if [ -f retrace-report.md ]; then
-          echo "## Retrace behavioral report" >> "$GITHUB_STEP_SUMMARY"
-          cat retrace-report.md >> "$GITHUB_STEP_SUMMARY"
+        if [ -f nodrift-report.md ]; then
+          echo "## NoDrift behavioral report" >> "$GITHUB_STEP_SUMMARY"
+          cat nodrift-report.md >> "$GITHUB_STEP_SUMMARY"
         fi

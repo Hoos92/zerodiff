@@ -7,9 +7,9 @@ import textwrap
 
 import pytest
 
-import retrace
-from retrace import cli, enterprise
-from retrace.testing import verify_traces
+import nodrift
+from nodrift import cli, enterprise
+from nodrift.testing import verify_traces
 
 
 @pytest.fixture()
@@ -20,12 +20,12 @@ def hard_dir(tmp_path, monkeypatch):
     (tmp_path / "hardleg_a.py").write_text(
         "def f(x):\n    return x + 1\n", encoding="utf-8")
     importlib.invalidate_caches()
-    retrace.wrap("hardleg_a", "f")
-    retrace.start_recording(str(tmp_path / "traces"))
+    nodrift.wrap("hardleg_a", "f")
+    nodrift.start_recording(str(tmp_path / "traces"))
     try:
         importlib.import_module("hardleg_a").f(1)
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
     yield tmp_path
     sys.modules.pop("hardleg_a", None)
 
@@ -54,7 +54,7 @@ def test_attestation_pins_code_files_and_detects_tampering(hard_dir):
     code_file = hard_dir / "hardleg_a.py"
 
     attestation = enterprise.build_attestation(
-        "traces", "retrace-report.json", str(key),
+        "traces", "nodrift-report.json", str(key),
         code_paths=[str(code_file)])
     assert str(code_file) in attestation["body"]["code"]
     (hard_dir / "att.json").write_text(json.dumps(attestation),

@@ -1,14 +1,14 @@
-"""MCP server: ``retrace mcp`` (or ``python -m retrace.mcp_server``).
+"""MCP server: ``nodrift mcp`` (or ``python -m nodrift.mcp_server``).
 
 Speaks Model Context Protocol (JSON-RPC 2.0, newline-delimited, stdio) with
 zero dependencies, exposing verification to any MCP-capable coding agent —
 Claude Code, Codex, Copilot, Cursor. Two tools:
 
-- retrace_replay: replay recorded traces against the rewrite, get the
+- nodrift_replay: replay recorded traces against the rewrite, get the
   summary and every divergence with hints
-- retrace_report: read an existing retrace-report.json
+- nodrift_report: read an existing nodrift-report.json
 
-Register with e.g.:  claude mcp add retrace -- retrace mcp
+Register with e.g.:  claude mcp add nodrift -- nodrift mcp
 """
 
 import json
@@ -24,7 +24,7 @@ MAX_TOOL_DIVERGENCES = 40
 
 TOOLS = [
     {
-        "name": "retrace_replay",
+        "name": "nodrift_replay",
         "description": (
             "Replay recorded behavioral traces against rewritten code and "
             "report every divergence. Returns matched/diverged counts and "
@@ -43,7 +43,7 @@ TOOLS = [
                                    '{"billing": "billing_v2"}'},
                 "config": {
                     "type": "string",
-                    "description": "path to retrace.toml (optional)"},
+                    "description": "path to nodrift.toml (optional)"},
                 "isolate": {
                     "type": "boolean",
                     "description": "replay in a worker subprocess (default "
@@ -58,21 +58,21 @@ TOOLS = [
         },
     },
     {
-        "name": "retrace_report",
-        "description": "Read an existing retrace-report.json and return "
+        "name": "nodrift_report",
+        "description": "Read an existing nodrift-report.json and return "
                        "its summary and divergences.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "report_path": {
                     "type": "string",
-                    "description": "path to retrace-report.json "
-                                   "(default: ./retrace-report.json)"},
+                    "description": "path to nodrift-report.json "
+                                   "(default: ./nodrift-report.json)"},
             },
         },
     },
     {
-        "name": "retrace_quality",
+        "name": "nodrift_quality",
         "description": (
             "Run the security/quality gate on source files: flags "
             "eval/exec, shell=True, SQL interpolation, hardcoded secrets, "
@@ -88,7 +88,7 @@ TOOLS = [
                     "description": "source files to analyze"},
                 "config": {
                     "type": "string",
-                    "description": "path to retrace.toml for [quality] "
+                    "description": "path to nodrift.toml for [quality] "
                                    "budgets (optional)"},
             },
             "required": ["files"],
@@ -163,7 +163,7 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "protocolVersion": request.get("params", {}).get(
                 "protocolVersion", PROTOCOL_VERSION),
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "retrace", "version": __version__},
+            "serverInfo": {"name": "nodrift", "version": __version__},
         })
     if method == "ping":
         return _result(request_id, {})
@@ -174,13 +174,13 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         name = params.get("name")
         args = params.get("arguments") or {}
         try:
-            if name == "retrace_replay":
+            if name == "nodrift_replay":
                 payload = _tool_replay(args)
                 is_error = payload["summary"]["divergence_count"] > 0
-            elif name == "retrace_report":
+            elif name == "nodrift_report":
                 payload = _tool_report(args)
                 is_error = payload["summary"]["divergence_count"] > 0
-            elif name == "retrace_quality":
+            elif name == "nodrift_quality":
                 payload = _tool_quality(args)
                 is_error = payload["errors"] > 0
             else:
@@ -194,7 +194,7 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         except Exception as exc:
             return _result(request_id, {
                 "content": [{"type": "text",
-                             "text": "retrace error: %r" % exc}],
+                             "text": "nodrift error: %r" % exc}],
                 "isError": True,
             })
     if is_notification:

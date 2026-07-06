@@ -9,8 +9,8 @@ entirely from recorded behavior.
 
 ```bash
 pip install python-slugify
-retrace record --include slugify.slugify -o traces -- python run_scenarios.py
-retrace replay -t traces
+nodrift record --include slugify.slugify -o traces -- python run_scenarios.py
+nodrift replay -t traces
 ```
 
 See [docs/VALIDATION.md](../../docs/VALIDATION.md) for first-pass numbers.

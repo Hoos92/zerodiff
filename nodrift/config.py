@@ -1,7 +1,7 @@
-"""Loading ``retrace.toml``.
+"""Loading ``nodrift.toml``.
 
 Uses the stdlib ``tomllib`` on Python 3.11+, and falls back to a minimal
-built-in reader for the subset of TOML that retrace configs use (sections,
+built-in reader for the subset of TOML that nodrift configs use (sections,
 string/number/bool values, flat arrays, quoted keys) so that Python 3.8
 works with zero dependencies.
 """
@@ -10,7 +10,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-DEFAULT_CONFIG_NAME = "retrace.toml"
+DEFAULT_CONFIG_NAME = "nodrift.toml"
 
 
 class Config:
@@ -187,7 +187,7 @@ def _parse_value(text: str, where: str) -> Any:
         return float(text)
     except ValueError:
         raise ValueError(
-            "retrace.toml: cannot parse value %r (%s). The built-in reader "
+            "nodrift.toml: cannot parse value %r (%s). The built-in reader "
             "supports strings, numbers, booleans and flat arrays." % (text, where)
         )
 
@@ -206,11 +206,11 @@ def _parse_toml_subset(text: str, path: str) -> Dict[str, Any]:
             for part in _split_dotted(m.group(1)):
                 current = current.setdefault(part, {})
                 if not isinstance(current, dict):
-                    raise ValueError("retrace.toml: section conflicts with "
+                    raise ValueError("nodrift.toml: section conflicts with "
                                      "existing key (%s)" % where)
             continue
         if "=" not in line:
-            raise ValueError("retrace.toml: expected 'key = value' (%s)" % where)
+            raise ValueError("nodrift.toml: expected 'key = value' (%s)" % where)
         key_text, _, value_text = line.partition("=")
         # strip trailing comments outside quotes
         value_text = _strip_comment(value_text)

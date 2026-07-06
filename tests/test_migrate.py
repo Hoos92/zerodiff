@@ -1,4 +1,4 @@
-"""`retrace migrate`: record -> scaffold -> agent loop -> attestation."""
+"""`nodrift migrate`: record -> scaffold -> agent loop -> attestation."""
 
 import importlib
 import json
@@ -8,7 +8,7 @@ import textwrap
 
 import pytest
 
-from retrace import cli, enterprise
+from nodrift import cli, enterprise
 
 LEGACY = """
 def shipping_cost(weight_kg, express=False):
@@ -94,7 +94,7 @@ def test_migrate_end_to_end_with_attestation(mig_dir):
     assert code == 0
 
     # the agent's implementation landed and matches everything
-    with open("retrace-report.json", encoding="utf-8") as f:
+    with open("nodrift-report.json", encoding="utf-8") as f:
         report = json.load(f)
     assert report["verdict"] == "matched"
     assert report["summary"]["replayed"] == 12

@@ -3,12 +3,12 @@ complexity: large linguistic rule tables. English cardinal/ordinal/year.
 
 Uses explicit wrapping (the third supported recording style):
 
-    retrace record -o traces -- python run_scenarios.py
+    nodrift record -o traces -- python run_scenarios.py
 """
 
-import retrace
+import nodrift
 
-retrace.wrap("num2words", "num2words")
+nodrift.wrap("num2words", "num2words")
 
 from num2words import num2words  # noqa: E402
 

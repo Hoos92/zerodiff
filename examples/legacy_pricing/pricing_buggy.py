@@ -1,5 +1,5 @@
 """A rewrite of the legacy pricing module with five seeded behavioral bugs —
-the kinds of changes AI rewrites really introduce. Retrace should catch all
+the kinds of changes AI rewrites really introduce. NoDrift should catch all
 five. (Each bug is marked BUG-n.)
 
 BUG-1  silently skips invalid quantities instead of raising ValueError

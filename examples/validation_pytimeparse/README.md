@@ -9,7 +9,7 @@ Exactly the kind of permissive-grammar edge a rewrite "fixes" and breaks.
 
 ```bash
 pip install pytimeparse
-retrace migrate --driver "python run_scenarios.py" \
+nodrift migrate --driver "python run_scenarios.py" \
     --agent "python install_agent.py" --max-iters 3 \
     --attest --key-file team.key
 ```

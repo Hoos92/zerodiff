@@ -1,19 +1,19 @@
 """Exercises python-semver (github.com/python-semver/python-semver) —
 the semver.org precedence rules that everyone implements wrong.
 
-    retrace record -o traces -- python run_scenarios.py
+    nodrift record -o traces -- python run_scenarios.py
 """
 
 import warnings
 
 warnings.simplefilter("ignore")  # legacy API emits DeprecationWarning
 
-import retrace  # noqa: E402
+import nodrift  # noqa: E402
 
 for fn in ("compare", "parse", "bump_major", "bump_minor", "bump_patch",
            "bump_prerelease", "bump_build", "finalize_version",
            "format_version"):
-    retrace.wrap("semver", fn)
+    nodrift.wrap("semver", fn)
 
 import semver  # noqa: E402
 

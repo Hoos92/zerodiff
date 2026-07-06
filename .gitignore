@@ -2,8 +2,8 @@
 # Never commit them by default.
 traces/
 **/traces/
-retrace-report.json
-retrace-report.md
+nodrift-report.json
+nodrift-report.md
 
 # Python
 __pycache__/
@@ -16,9 +16,9 @@ dist/
 venv/
 
 # run artifacts and keys must never be committed
-.retrace/
-**/.retrace/
-retrace-attestation.json
-retrace-junit.xml
-retrace-fix-prompt.md
+.nodrift/
+**/.nodrift/
+nodrift-attestation.json
+nodrift-junit.xml
+nodrift-fix-prompt.md
 *.key

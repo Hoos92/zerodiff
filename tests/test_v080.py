@@ -10,11 +10,11 @@ import time
 
 import pytest
 
-import retrace
-from retrace import cli, differ, enterprise, recorder, report as report_mod
-from retrace.config import Config, _parse_toml_subset
-from retrace.loop import build_prompt, run_loop
-from retrace.replayer import replay_all
+import nodrift
+from nodrift import cli, differ, enterprise, recorder, report as report_mod
+from nodrift.config import Config, _parse_toml_subset
+from nodrift.loop import build_prompt, run_loop
+from nodrift.replayer import replay_all
 
 
 @pytest.fixture()
@@ -51,12 +51,12 @@ NON_MUTATING_REWRITE = """
 class TestMutationCapture:
     def _record(self, ws_dir):
         _write(ws_dir, "v8leg_m", MUTATING_LEGACY)
-        retrace.wrap("v8leg_m", "register")
-        retrace.start_recording(str(ws_dir / "traces"))
+        nodrift.wrap("v8leg_m", "register")
+        nodrift.start_recording(str(ws_dir / "traces"))
         try:
             importlib.import_module("v8leg_m").register(["a", "b"], "c")
         finally:
-            retrace.stop_recording()
+            nodrift.stop_recording()
 
     def test_mutation_recorded(self, ws):
         self._record(ws)
@@ -90,7 +90,7 @@ class TestMutationCapture:
         assert any(d.path.startswith("mutation.") for d in result.divergences)
 
     def test_opt_out_disables_capture(self, ws, monkeypatch):
-        (ws / "retrace.toml").write_text("[record]\nmutations = false\n",
+        (ws / "nodrift.toml").write_text("[record]\nmutations = false\n",
                                          encoding="utf-8")
         monkeypatch.setattr(recorder, "_config", None)
         self._record(ws)
@@ -114,9 +114,9 @@ STATEFUL = """
 class TestInOrderReplay:
     def _record_interleaved(self, ws_dir):
         _write(ws_dir, "v8state_a", STATEFUL)
-        retrace.wrap("v8state_a", "push")
-        retrace.wrap("v8state_a", "total")
-        retrace.start_recording(str(ws_dir / "traces"))
+        nodrift.wrap("v8state_a", "push")
+        nodrift.wrap("v8state_a", "total")
+        nodrift.start_recording(str(ws_dir / "traces"))
         try:
             module = importlib.import_module("v8state_a")
             module.push(1)
@@ -124,7 +124,7 @@ class TestInOrderReplay:
             module.push(2)
             module.total()   # -> 2 (same input, different output!)
         finally:
-            retrace.stop_recording()
+            nodrift.stop_recording()
 
     def test_in_order_replays_chronologically(self, ws):
         self._record_interleaved(ws)
@@ -152,12 +152,12 @@ class TestInOrderReplay:
 class TestLoopRobustness:
     def _record_simple(self, ws_dir):
         _write(ws_dir, "v8leg_l", "def f(x):\n    return x * 2\n")
-        retrace.wrap("v8leg_l", "f")
-        retrace.start_recording(str(ws_dir / "traces"))
+        nodrift.wrap("v8leg_l", "f")
+        nodrift.start_recording(str(ws_dir / "traces"))
         try:
             importlib.import_module("v8leg_l").f(5)
         finally:
-            retrace.stop_recording()
+            nodrift.stop_recording()
         _write(ws_dir, "v8new_l", "def f(x):\n    return x * 3\n")
 
     def test_stall_detection_stops_early(self, ws):
@@ -203,14 +203,14 @@ class TestLoopRobustness:
 
 def test_parallel_replay_matches_serial(ws):
     _write(ws, "v8leg_p", "def f(x):\n    return x + 1\n")
-    retrace.wrap("v8leg_p", "f")
-    retrace.start_recording(str(ws / "traces"))
+    nodrift.wrap("v8leg_p", "f")
+    nodrift.start_recording(str(ws / "traces"))
     try:
         module = importlib.import_module("v8leg_p")
         for i in range(7):
             module.f(i)
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
     _write(ws, "v8new_p", "def f(x):\n    return 1 + x\n")
 
     serial = replay_all(str(ws / "traces"), {"v8leg_p": "v8new_p"},
@@ -231,14 +231,14 @@ def test_mcp_quality_tool(ws):
          "params": {"protocolVersion": "2024-11-05"}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-         "params": {"name": "retrace_quality",
+         "params": {"name": "nodrift_quality",
                     "arguments": {"files": ["bad.py"]}}},
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
-         "params": {"name": "retrace_quality",
+         "params": {"name": "nodrift_quality",
                     "arguments": {"files": ["good.py"]}}},
     ]
     payload = "".join(json.dumps(r) + "\n" for r in requests)
-    proc = subprocess.run([sys.executable, "-m", "retrace.mcp_server"],
+    proc = subprocess.run([sys.executable, "-m", "nodrift.mcp_server"],
                           input=payload, capture_output=True, text=True,
                           cwd=str(ws), timeout=120)
     responses = [json.loads(line) for line in proc.stdout.splitlines()
@@ -253,21 +253,21 @@ def test_mcp_quality_tool(ws):
 class TestAttestationCoherence:
     def _setup(self, ws_dir):
         _write(ws_dir, "v8leg_a", "def f(x):\n    return x\n")
-        retrace.wrap("v8leg_a", "f")
-        retrace.start_recording(str(ws_dir / "traces"))
+        nodrift.wrap("v8leg_a", "f")
+        nodrift.start_recording(str(ws_dir / "traces"))
         try:
             importlib.import_module("v8leg_a").f(1)
         finally:
-            retrace.stop_recording()
-        from retrace.testing import verify_traces
+            nodrift.stop_recording()
+        from nodrift.testing import verify_traces
         verify_traces("traces", {"v8leg_a": "v8leg_a"})
 
     def test_env_var_key_and_quality_block(self, ws, monkeypatch):
         self._setup(ws)
-        monkeypatch.setenv("RETRACE_ATTEST_KEY",
+        monkeypatch.setenv("NODRIFT_ATTEST_KEY",
                            "env-provided-signing-key-123")
         attestation = enterprise.build_attestation(
-            "traces", "retrace-report.json", None,
+            "traces", "nodrift-report.json", None,
             code_paths=["v8leg_a.py"])
         assert attestation["body"]["quality"]["errors"] == 0
         (ws / "att.json").write_text(json.dumps(attestation),
@@ -277,12 +277,12 @@ class TestAttestationCoherence:
 
     def test_quality_block_reflects_insecure_code(self, ws, monkeypatch):
         self._setup(ws)
-        monkeypatch.setenv("RETRACE_ATTEST_KEY",
+        monkeypatch.setenv("NODRIFT_ATTEST_KEY",
                            "env-provided-signing-key-123")
         (ws / "sketchy.py").write_text("def f(s):\n    return eval(s)\n",
                                        encoding="utf-8")
         attestation = enterprise.build_attestation(
-            "traces", "retrace-report.json", None,
+            "traces", "nodrift-report.json", None,
             code_paths=["sketchy.py"])
         assert attestation["body"]["quality"]["errors"] == 1
 

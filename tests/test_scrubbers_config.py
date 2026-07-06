@@ -1,7 +1,7 @@
 import pytest
 
-from retrace import scrubbers
-from retrace.config import Config, _parse_toml_subset
+from nodrift import scrubbers
+from nodrift.config import Config, _parse_toml_subset
 
 
 class TestScrub:

@@ -1,8 +1,8 @@
 """Exercises dateutil.easter across its whole documented domain.
 
-No retrace code anywhere — recording happens via auto-instrumentation:
+No nodrift code anywhere — recording happens via auto-instrumentation:
 
-    retrace record --include dateutil.easter -o traces -- python run_scenarios.py
+    nodrift record --include dateutil.easter -o traces -- python run_scenarios.py
 """
 
 from dateutil import easter

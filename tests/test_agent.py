@@ -10,11 +10,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
-import retrace
-from retrace import cli
-from retrace.agent import AgentError, BuiltinAgent, parse_llm_spec
-from retrace.config import Config
-from retrace.loop import run_loop
+import nodrift
+from nodrift import cli
+from nodrift.agent import AgentError, BuiltinAgent, parse_llm_spec
+from nodrift.config import Config
+from nodrift.loop import run_loop
 
 
 class _Script:
@@ -65,7 +65,7 @@ def stub():
 def ws(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.chdir(tmp_path)
-    for env in ("OPENAI_API_KEY", "RETRACE_LLM_API_KEY"):
+    for env in ("OPENAI_API_KEY", "NODRIFT_LLM_API_KEY"):
         monkeypatch.delenv(env, raising=False)
     importlib.invalidate_caches()
     yield tmp_path
@@ -75,7 +75,7 @@ def ws(tmp_path, monkeypatch):
 
 
 def _block(name, content):
-    return "<<<RETRACE-FILE: %s>>>\n%s<<<RETRACE-END>>>" % (name, content)
+    return "<<<NODRIFT-FILE: %s>>>\n%s<<<NODRIFT-END>>>" % (name, content)
 
 
 class TestSpecAndKeys:
@@ -185,12 +185,12 @@ def test_builtin_agent_full_loop_with_quality_gate(stub, ws):
         textwrap.dedent(s), encoding="utf-8"), importlib.invalidate_caches())
     _write("v9leg_a.py", "def f(x):\n    return x * 2\n")
     _write("v9new_a.py", "def f(x):\n    return x * 3\n")
-    retrace.wrap("v9leg_a", "f")
-    retrace.start_recording(str(ws / "traces"))
+    nodrift.wrap("v9leg_a", "f")
+    nodrift.start_recording(str(ws / "traces"))
     try:
         importlib.import_module("v9leg_a").f(5)
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
 
     script.replies.append({"text": _block(
         "v9new_a.py", 'def f(x):\n    return eval("%d * 2" % x)\n')})

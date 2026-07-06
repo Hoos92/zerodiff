@@ -1,6 +1,6 @@
-# Validation: three real GitHub libraries through the Retrace loop
+# Validation: three real GitHub libraries through the NoDrift loop
 
-To validate Retrace beyond the [dateutil case study](CASE_STUDY.md), the
+To validate NoDrift beyond the [dateutil case study](CASE_STUDY.md), the
 same loop — record real behavior with zero source edits, write a clean-room
 modern rewrite, replay, fix from hints — was run against three more real
 libraries, chosen for three different *shapes* of behavior:
@@ -108,7 +108,7 @@ again every one reached 100% of recorded behaviors.
 
 # Third cohort: `python-stdnum` — the full pipeline, end to end
 
-The hardest validation, run entirely through **`retrace migrate`**:
+The hardest validation, run entirely through **`nodrift migrate`**:
 record → scaffold → agent loop → signed attestation, on a compliance
 library with three modules, a custom exception hierarchy, and per-country
 IBAN plug-ins.
@@ -117,7 +117,7 @@ IBAN plug-ins.
 |---|---|---|---|---|---|
 | `python-stdnum` (luhn+isbn+iban) | arthurdejong/python-stdnum | 269 | 14 | **38 diverged** | 3 |
 
-The run finished with `retrace attest` pinning 14 trace files **and the
+The run finished with `nodrift attest` pinning 14 trace files **and the
 three rewrite source files**, `verify-attestation` passing, and tamper
 detection catching a one-character edit to an attested file (exit 1).
 
@@ -144,7 +144,7 @@ Finds worth the price of admission:
 # Fourth cohort: spec-heavy parsers, full pipeline on v0.8.0
 
 Three libraries chosen for edge-case density, each run end-to-end through
-`retrace migrate` (record → scaffold → agent loop → **signed
+`nodrift migrate` (record → scaffold → agent loop → **signed
 attestation**), exercising the v0.8.0 loop economics live — stall
 detection stopped every first run the moment the scripted agent made no
 progress:
@@ -173,7 +173,7 @@ Finds:
 
 # Live cohort: real LLM, fully unattended (v0.9.1+)
 
-Run with `retrace migrate --llm openai:...` — a live OpenAI model writing
+Run with `nodrift migrate --llm openai:...` — a live OpenAI model writing
 the code, no human in the loop, on a real funded API key:
 
 | target | model | result | iterations |
@@ -208,10 +208,10 @@ What the live runs taught (and changed) about the product:
 
 ---
 
-# Hard cohort: where autonomous migration breaks — and Retrace holds the line
+# Hard cohort: where autonomous migration breaks — and NoDrift holds the line
 
 Three deliberately brutal targets, run fully unattended with GPT-4o
-(`retrace migrate --llm openai:gpt-4o`, 6 iterations max):
+(`nodrift migrate --llm openai:gpt-4o`, 6 iterations max):
 
 | target | what makes it brutal | behaviors | best unattended result |
 |---|---|---|---|
@@ -221,7 +221,7 @@ Three deliberately brutal targets, run fully unattended with GPT-4o
 
 **This is the pitch, not a failure.** Every one of those wrong rewrites
 ran fine and would have sailed through a typical review — 148 behavioral
-divergences that only recorded reality caught. Retrace's role is exactly
+divergences that only recorded reality caught. NoDrift's role is exactly
 this: when the agent can do it (see the live cohort above: 42/42,
 10,083/10,083), verification proves it; when the agent can't, the gate
 stays red and nothing broken ships. The capability frontier is measured,

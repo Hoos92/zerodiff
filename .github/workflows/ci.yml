@@ -26,7 +26,7 @@ jobs:
       - run: pip install -e .[dev]
       - run: python -m pytest tests/ -q
       - name: demo smoke test
-        run: retrace demo
+        run: nodrift demo
       - name: dogfood the quality gate on our own source
         shell: bash
-        run: retrace quality retrace/*.py
+        run: nodrift quality nodrift/*.py

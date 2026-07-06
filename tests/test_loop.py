@@ -6,9 +6,9 @@ import textwrap
 
 import pytest
 
-import retrace
-from retrace.config import Config
-from retrace.loop import build_prompt, run_loop
+import nodrift
+from nodrift.config import Config
+from nodrift.loop import build_prompt, run_loop
 
 LEGACY = """
 def add_fee(amount):
@@ -61,8 +61,8 @@ def _record_legacy(tmp_path):
     (tmp_path / "loopleg_a.py").write_text(textwrap.dedent(LEGACY),
                                            encoding="utf-8")
     importlib.invalidate_caches()
-    retrace.wrap("loopleg_a", "add_fee")
-    retrace.start_recording(str(tmp_path / "traces"))
+    nodrift.wrap("loopleg_a", "add_fee")
+    nodrift.start_recording(str(tmp_path / "traces"))
     try:
         module = importlib.import_module("loopleg_a")
         module.add_fee(100)
@@ -72,7 +72,7 @@ def _record_legacy(tmp_path):
         except ValueError:
             pass
     finally:
-        retrace.stop_recording()
+        nodrift.stop_recording()
 
 
 def test_loop_converges_with_stdin_agent(loop_dir):
