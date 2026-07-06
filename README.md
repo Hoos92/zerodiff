@@ -1,5 +1,7 @@
 # Retrace
 
+[![ci](https://github.com/Hoos92/retrace/actions/workflows/ci.yml/badge.svg)](https://github.com/Hoos92/retrace/actions/workflows/ci.yml)
+
 **Prove your rewrite behaves like the original — before you trust it.**
 
 AI agents can rewrite and migrate legacy code cheaply. The blocker is trust:
@@ -28,7 +30,8 @@ $ retrace replay -t traces --map "billing:billing_v2"
 ## Quick start
 
 ```bash
-pip install -e .
+pip install "retrace-harness @ git+https://github.com/Hoos92/retrace"
+# (or, from a checkout: pip install -e .)
 retrace demo    # 30-second guided example: record a legacy function,
                 # catch the silent change a rewrite introduced
 retrace init    # scaffold retrace.toml + .gitignore for your project
