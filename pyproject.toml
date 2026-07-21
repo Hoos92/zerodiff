@@ -29,6 +29,8 @@ nodrift = "nodrift.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Hoos92/nodrift"
+Issues = "https://github.com/Hoos92/nodrift/issues"
+Changelog = "https://github.com/Hoos92/nodrift/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["nodrift"]
