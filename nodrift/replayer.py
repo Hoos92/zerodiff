@@ -91,9 +91,17 @@ def compute_replay_mutations(before: Dict[str, Any], args,
 class InProcessInvoker:
     """Fast default: imports and calls the rewrite inside this process."""
 
+    def __init__(self) -> None:
+        # resolution repeats for every trace of a boundary (10k+ on large
+        # runs); cache per invoker rather than globally so a fresh replay
+        # after the rewrite changed on disk still resolves from scratch
+        self._resolved = {}  # type: Dict[str, Tuple[Any, Optional[str]]]
+
     def invoke(self, target: str,
                encoded_input: Dict[str, Any]) -> Dict[str, Any]:
-        fn, resolve_error = resolve_callable(target)
+        if target not in self._resolved:
+            self._resolved[target] = resolve_callable(target)
+        fn, resolve_error = self._resolved[target]
         if fn is None:
             return {"status": "missing", "detail": resolve_error}
         try:
@@ -444,13 +452,18 @@ def _replay_traces(traces: List[Dict[str, Any]], mappings: Dict[str, str],
     result.traces_total = len(traces)
     try:
         for trace in traces:
+            counted = result.replayed
             try:
                 replay_one(trace, mappings, cfg, result, invoker)
             except Exception as exc:  # harness bug on this trace: report it
                 target = trace.get("boundary", {}).get("target", "unknown")
-                result.replayed += 1
+                # replay_one may already have counted this trace before it
+                # failed; counting again would report more replays than
+                # there are traces
+                if result.replayed == counted:
+                    result.replayed += 1
+                    result._bstats(target)["replayed"] += 1
                 result.diverged_traces += 1
-                result._bstats(target)["replayed"] += 1
                 result._bstats(target)["diverged"] += 1
                 result.divergences.append(differ.Divergence(
                     differ.KIND_REPLAY_ERROR, target, trace.get("id", "?"),
@@ -475,8 +488,12 @@ def replay_all(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         # inputs can legitimately produce different outputs as module
         # state evolves, so deduplication would discard real behavior
         traces = list(store.iter_traces(trace_dir))
-        traces.sort(key=lambda t: (t.get("meta", {}).get("ts", ""),
-                                   t.get("meta", {}).get("seq", 0)))
+        # seq is a monotonic counter; ts is wall clock, which can step
+        # backwards mid-recording (NTP) and misorder the very replay whose
+        # whole point is chronology. ts only breaks ties for pre-0.8 traces
+        # recorded before seq existed.
+        traces.sort(key=lambda t: (t.get("meta", {}).get("seq", 0),
+                                   t.get("meta", {}).get("ts", "")))
     else:
         traces = store.load_unique_traces(trace_dir)
 

@@ -68,8 +68,25 @@ def scrub(tree: Any, ignore_fields: List[str], regexes: List[Any],
             else:
                 result[key] = scrub(value, ignore_fields, regexes,
                                     child_path, redact_fields)
-        return result
+        return _refingerprint(result)
     return tree
+
+
+def _refingerprint(node: Dict[str, Any]) -> Dict[str, Any]:
+    """An opaque value's digest was computed at record time from its raw
+    repr. Once scrubbers have normalized that repr, the stale digest would
+    report two now-identical reprs as differing -- so recompute it."""
+    opaque = node.get("__opaque__")
+    if not isinstance(opaque, dict) or "digest" not in opaque:
+        return node
+    from .serializer import opaque_digest
+
+    rescrubbed = dict(opaque)
+    rescrubbed["digest"] = opaque_digest(str(opaque.get("type", "")),
+                                         str(opaque.get("repr", "")))
+    out = dict(node)
+    out["__opaque__"] = rescrubbed
+    return out
 
 
 def compile_scrubbers(cfg, boundary: str) -> Dict[str, Any]:

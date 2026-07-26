@@ -58,6 +58,45 @@ def _call_name(node: ast.Call) -> str:
     return ".".join(reversed(parts))
 
 
+def _import_aliases(tree) -> Dict[str, str]:
+    """Map each locally bound name to the dotted path it really refers to.
+
+    Rules below are written against canonical names like ``os.system``, but
+    ``from os import system`` and ``import os as o`` are the forms people and
+    LLMs actually write. Without this, the gate only catches the one spelling.
+    """
+    aliases = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.asname:
+                    aliases[alias.asname] = alias.name
+                else:
+                    # `import a.b.c` binds `a`; calls already spell it out
+                    root = alias.name.split(".")[0]
+                    aliases[root] = root
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:  # relative import: not a package we have rules for
+                continue
+            module = node.module or ""
+            for alias in node.names:
+                local = alias.asname or alias.name
+                aliases[local] = (module + "." + alias.name if module
+                                  else alias.name)
+    return aliases
+
+
+def _resolve(name: str, aliases: Dict[str, str]) -> str:
+    """Rewrite a call's dotted name through the import bindings."""
+    if not name:
+        return name
+    parts = name.split(".")
+    base = aliases.get(parts[0])
+    if base is None:
+        return name
+    return ".".join([base] + parts[1:])
+
+
 def _kw(node: ast.Call, name: str):
     for keyword in node.keywords:
         if keyword.arg == name:
@@ -75,10 +114,12 @@ def _is_false(node) -> bool:
 
 class _Analyzer(ast.NodeVisitor):
     def __init__(self, path: str, budgets: Dict[str, int],
-                 disabled: List[str]) -> None:
+                 disabled: List[str],
+                 aliases: Optional[Dict[str, str]] = None) -> None:
         self.path = path
         self.budgets = budgets
         self.disabled = set(disabled)
+        self.aliases = aliases or {}
         self.findings = []  # type: List[Finding]
 
     def add(self, rule: str, severity: str, line: int, message: str,
@@ -90,7 +131,7 @@ class _Analyzer(ast.NodeVisitor):
 
     # -- dangerous calls ---------------------------------------------------
     def visit_Call(self, node: ast.Call) -> None:
-        name = _call_name(node)
+        name = _resolve(_call_name(node), self.aliases)
         line = node.lineno
 
         if name in ("eval", "exec") or name.endswith(("builtins.eval",
@@ -264,14 +305,15 @@ def check_source(source: str, path: str,
                  disabled: Optional[List[str]] = None) -> List[Finding]:
     merged = dict(DEFAULT_BUDGETS)
     merged.update(budgets or {})
-    analyzer = _Analyzer(path, merged, disabled or [])
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
+        analyzer = _Analyzer(path, merged, disabled or [])
         analyzer.add("syntax-error", "error", exc.lineno or 0,
                      "file does not parse: %s" % exc.msg,
                      "fix the syntax error first.")
         return analyzer.findings
+    analyzer = _Analyzer(path, merged, disabled or [], _import_aliases(tree))
     analyzer.visit(tree)
 
     # raw-source secret scanning (catches strings the AST walk skips)

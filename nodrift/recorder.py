@@ -16,6 +16,7 @@ import functools
 import importlib
 import itertools
 import os
+import threading
 import time
 from typing import Any, Callable, Dict, Optional
 
@@ -28,7 +29,16 @@ _seq = itertools.count()  # global chronology across all boundaries
 
 _active_dir = None  # type: Optional[str]
 _dropped = 0  # traces lost to recorder-internal errors (never raised)
+_dropped_lock = threading.Lock()  # += is read-modify-write, not atomic
 _config = None  # loaded lazily on first trace write
+
+
+def _drop() -> None:
+    """Count a lost trace. Threaded programs record concurrently, so the
+    counter that reports lost coverage must not itself lose counts."""
+    global _dropped
+    with _dropped_lock:
+        _dropped += 1
 
 
 def _get_config():
@@ -107,7 +117,6 @@ def compute_mutations(encoded_before: Dict, args: tuple, kwargs: dict,
 def _write_trace(target: str, trace_dir: str, encoded_input: Dict,
                  output: dict, duration_ms: float,
                  mutations: Optional[Dict] = None) -> None:
-    global _dropped
     try:
         if output.get("type") == "return":
             output = {"type": "return",
@@ -134,7 +143,7 @@ def _write_trace(target: str, trace_dir: str, encoded_input: Dict,
             trace["mutations"] = mutations
         store.append_trace(trace_dir, trace)
     except Exception:
-        _dropped += 1
+        _drop()
 
 
 def _version() -> str:
@@ -165,9 +174,8 @@ def record(fn: Callable) -> Callable:
             pass
 
         def finish(output, duration):
-            global _dropped
             if encoded_input is None:
-                _dropped += 1
+                _drop()
                 return
             mutations = None
             if capture_mutations:
@@ -213,10 +221,14 @@ def record_class(module_name: str, class_name: str,
         if name.startswith("_") or (methods is not None
                                     and name not in methods):
             continue
-        if isinstance(attr, staticmethod):
-            setattr(cls, name, staticmethod(record(attr.__func__)))
-        elif isinstance(attr, classmethod):
-            setattr(cls, name, classmethod(record(attr.__func__)))
+        # instrumenting twice would record two traces for one call and
+        # inflate the behavior count, so already-wrapped methods are skipped
+        # whatever descriptor they are behind
+        if isinstance(attr, (staticmethod, classmethod)):
+            inner = attr.__func__
+            if getattr(inner, "__nodrift_wrapped__", None) is not None:
+                continue
+            setattr(cls, name, type(attr)(record(inner)))
         elif callable(attr):
             if getattr(attr, "__nodrift_wrapped__", None) is not None:
                 continue
@@ -227,6 +239,25 @@ def record_class(module_name: str, class_name: str,
     return wrapped
 
 
+def unwrap_class(module_name: str, class_name: str) -> int:
+    """Undo ``record_class``. Returns the number of methods restored."""
+    module = importlib.import_module(module_name)
+    cls = getattr(module, class_name)
+    restored = 0
+    for name, attr in list(vars(cls).items()):
+        if isinstance(attr, (staticmethod, classmethod)):
+            original = getattr(attr.__func__, "__nodrift_wrapped__", None)
+            if original is not None:
+                setattr(cls, name, type(attr)(original))
+                restored += 1
+        elif callable(attr):
+            original = getattr(attr, "__nodrift_wrapped__", None)
+            if original is not None:
+                setattr(cls, name, original)
+                restored += 1
+    return restored
+
+
 def wrap(module_name: str, function_name: str) -> Callable:
     """Instrument ``module.function`` without editing its source.
 
@@ -235,14 +266,30 @@ def wrap(module_name: str, function_name: str) -> Callable:
     legacy code. Note: code that imported the function *by value*
     (``from mod import fn``) before ``wrap()`` ran keeps the raw reference.
     """
-    module = importlib.import_module(module_name)
-    owner = module
-    parts = function_name.split(".")  # supports "Class.method"
-    for part in parts[:-1]:
-        owner = getattr(owner, part)
-    original = getattr(owner, parts[-1])
+    owner, attr = _resolve_owner(module_name, function_name)
+    original = getattr(owner, attr)
     if getattr(original, "__nodrift_wrapped__", None) is not None:
         return original
     wrapped = record(original)
-    setattr(owner, parts[-1], wrapped)
+    setattr(owner, attr, wrapped)
     return wrapped
+
+
+def _resolve_owner(module_name: str, function_name: str):
+    owner = importlib.import_module(module_name)
+    parts = function_name.split(".")  # supports "Class.method"
+    for part in parts[:-1]:
+        owner = getattr(owner, part)
+    return owner, parts[-1]
+
+
+def unwrap(module_name: str, function_name: str) -> bool:
+    """Undo ``wrap``, restoring the original attribute. Returns True if a
+    wrapper was removed. Instrumentation otherwise lasts for the life of the
+    process, which leaks between tests sharing an interpreter."""
+    owner, attr = _resolve_owner(module_name, function_name)
+    original = getattr(getattr(owner, attr), "__nodrift_wrapped__", None)
+    if original is None:
+        return False
+    setattr(owner, attr, original)
+    return True

@@ -15,6 +15,17 @@ KIND_MISSING = "missing_boundary"
 KIND_WEAK = "weak_comparison"
 KIND_REPLAY_ERROR = "replay_error"
 KIND_CRASH = "process_crash"
+KIND_TRUNCATED = "divergences_truncated"
+
+# Kinds whose marker is shared by two Python types, told apart by a sibling
+# flag: {"__set__": [...], "frozen": true}. The flag is part of the type, so
+# it has to be compared -- comparing only the payload would call a set and a
+# frozenset equivalent.
+_FLAGGED_KINDS = {
+    # kind: (flag key, type when the flag is set, type when it is not)
+    "set": ("frozen", "frozenset", "set"),
+    "bytes": ("mutable", "bytearray", "bytes"),
+}
 
 _MARKERS = ("__tuple__", "__set__", "__dict__", "__bytes__", "__datetime__",
             "__date__", "__time__", "__decimal__", "__enum__",
@@ -168,21 +179,41 @@ class _Ctx:
         self.float_tolerance = float_tolerance
         self.divergences = []  # type: List[Divergence]
         self.weak_matches = 0
+        self.truncated = False
+
+    def full(self) -> bool:
+        """At the cap, comparison stops descending -- so how many findings
+        remain is genuinely unknown, only that some were dropped."""
+        if len(self.divergences) >= MAX_DIVERGENCES_PER_TRACE:
+            self.truncated = True
+            return True
+        return False
 
     def add(self, kind: str, path: str, expected: Any, actual: Any,
             hint: str) -> None:
-        if len(self.divergences) >= MAX_DIVERGENCES_PER_TRACE:
+        if self.full():
             return
         self.divergences.append(Divergence(
             kind, self.boundary, self.trace_id, path, expected, actual, hint,
             input_preview=self.input_preview))
 
     def finish(self) -> Tuple[List[Divergence], int]:
+        # never drop findings silently: a capped trace says so in the report
+        if self.truncated:
+            self.divergences.append(Divergence(
+                KIND_TRUNCATED, self.boundary, self.trace_id, "report",
+                "an unknown number of further divergences",
+                "%d shown" % len(self.divergences),
+                "this single call hit the {cap}-divergence cap and "
+                "comparison stopped, so more differences may remain -- fix "
+                "the ones shown and re-run; capped traces usually share one "
+                "root cause.".format(cap=MAX_DIVERGENCES_PER_TRACE),
+                input_preview=self.input_preview))
         return self.divergences, self.weak_matches
 
 
 def _diff_tree(exp: Any, act: Any, path: str, ctx: _Ctx) -> None:
-    if len(ctx.divergences) >= MAX_DIVERGENCES_PER_TRACE:
+    if ctx.full():
         return
 
     exp_kind = _node_kind(exp)
@@ -291,9 +322,70 @@ def _diff_tree(exp: Any, act: Any, path: str, ctx: _Ctx) -> None:
     # marker containers: recurse into their payloads
     marker = "__%s__" % exp_kind
     exp_payload, act_payload = exp.get(marker), act.get(marker)
+
+    # a sibling flag distinguishes two types sharing one marker; equal
+    # payloads with different flags are still a behavior change
+    flagged = _FLAGGED_KINDS.get(exp_kind)
+    if flagged is not None:
+        flag, when_set, when_clear = flagged
+        exp_type = when_set if exp.get(flag) else when_clear
+        act_type = when_set if act.get(flag) else when_clear
+        if exp_type != act_type:
+            ctx.add(KIND_TYPE, path, exp_type, act_type,
+                    "at {p}, the original produced a {e} but the rewrite "
+                    "produced a {a} for input {inp} -- the contents are the "
+                    "same but the type and its mutability are not; return a "
+                    "{e} from {b}.".format(p=path, e=exp_type, a=act_type,
+                                           inp=ctx.input_preview,
+                                           b=ctx.boundary))
+            return
+
     if exp_kind in ("tuple", "set", "dict"):
         _diff_tree(exp_payload, act_payload, path, ctx)
         return
+
+    # dataclasses and enums recurse field-by-field so that float_tolerance
+    # applies inside them and hints point at the field that actually changed
+    if exp_kind == "dataclass":
+        exp_info, act_info = exp[marker], act[marker]
+        if exp_info.get("type") != act_info.get("type"):
+            ctx.add(KIND_TYPE, path, exp_info.get("type"),
+                    act_info.get("type"),
+                    "at {p}, the original produced a {e} but the rewrite "
+                    "produced a {a} for input {inp} -- return the same "
+                    "dataclass from {b}.".format(
+                        p=path, e=exp_info.get("type"),
+                        a=act_info.get("type"), inp=ctx.input_preview,
+                        b=ctx.boundary))
+            return
+        _diff_tree(exp_info.get("fields"), act_info.get("fields"), path, ctx)
+        return
+
+    if exp_kind == "enum":
+        exp_info, act_info = exp[marker], act[marker]
+        if exp_info.get("type") != act_info.get("type"):
+            ctx.add(KIND_TYPE, path, exp_info.get("type"),
+                    act_info.get("type"),
+                    "at {p}, the original produced a {e} member but the "
+                    "rewrite produced a {a} for input {inp} -- return the "
+                    "same enum from {b}.".format(
+                        p=path, e=exp_info.get("type"),
+                        a=act_info.get("type"), inp=ctx.input_preview,
+                        b=ctx.boundary))
+            return
+        if exp_info.get("name") != act_info.get("name"):
+            ctx.add(KIND_VALUE, path, exp_info.get("name"),
+                    act_info.get("name"),
+                    "at {p}, expected enum member {e} but got {a} for input "
+                    "{inp} -- fix the logic in {b} that selects the "
+                    "member.".format(p=path, e=exp_info.get("name"),
+                                     a=act_info.get("name"),
+                                     inp=ctx.input_preview, b=ctx.boundary))
+            return
+        _diff_tree(exp_info.get("value"), act_info.get("value"),
+                   path + ".value", ctx)
+        return
+
     if exp_payload != act_payload:
         ctx.add(KIND_VALUE, path, _preview(exp), _preview(act),
                 "at {p}, expected {e} but got {a} for input {inp} -- fix the "

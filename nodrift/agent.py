@@ -124,14 +124,24 @@ class BuiltinAgent:
         return url, headers, body
 
     def _parse_response(self, data):
-        if self.provider == "anthropic":
-            text = "".join(part.get("text", "")
-                           for part in data.get("content", []))
-            stopped_short = data.get("stop_reason") == "max_tokens"
-        else:
-            choice = data["choices"][0]
-            text = choice["message"]["content"] or ""
-            stopped_short = choice.get("finish_reason") == "length"
+        # `openai-compatible` points at third-party servers whose replies do
+        # not always match the documented shape; a surprising payload must
+        # fail this iteration cleanly, not crash the whole loop
+        try:
+            if self.provider == "anthropic":
+                text = "".join(part.get("text", "")
+                               for part in data.get("content", []))
+                stopped_short = data.get("stop_reason") == "max_tokens"
+            else:
+                choice = data["choices"][0]
+                text = choice["message"]["content"] or ""
+                stopped_short = choice.get("finish_reason") == "length"
+        except (KeyError, IndexError, TypeError, AttributeError) as exc:
+            raise AgentError(
+                "unexpected response shape from %s (%s: %s); the endpoint "
+                "may not speak this provider's wire format. Response: %s"
+                % (self.provider, type(exc).__name__, exc,
+                   json.dumps(data)[:300]))
         if stopped_short:
             raise AgentError(
                 "LLM response was truncated at %d tokens; raise "
@@ -148,8 +158,14 @@ class BuiltinAgent:
             try:
                 with urllib.request.urlopen(request,
                                             timeout=self.timeout) as resp:
-                    return self._parse_response(
-                        json.loads(resp.read().decode("utf-8")))
+                    raw = resp.read().decode("utf-8", "replace")
+                try:
+                    data = json.loads(raw)
+                except ValueError:
+                    raise AgentError(
+                        "LLM endpoint %s returned a non-JSON body (a proxy "
+                        "or error page?): %s" % (url, raw[:300]))
+                return self._parse_response(data)
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", "replace")[:300]
                 if exc.code in (401, 403):

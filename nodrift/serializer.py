@@ -24,6 +24,16 @@ MAX_REPR = 300
 # 0x7f9a2c... memory addresses make reprs unstable across runs
 _ADDR_RE = re.compile(r"0x[0-9a-fA-F]+")
 
+# Keys that identify an encoded node's type. A *user* dict containing one of
+# these as a string key would encode to the same tree as the type it names
+# (e.g. {"__tuple__": [1, 2]} vs the tuple (1, 2)), so such dicts are forced
+# through the explicit pair form instead.
+RESERVED_KEYS = frozenset((
+    "__tuple__", "__set__", "__dict__", "__bytes__", "__datetime__",
+    "__date__", "__time__", "__decimal__", "__enum__", "__dataclass__",
+    "__float__", "__opaque__", "__adapted__", "__cycle__",
+))
+
 
 class OpaqueValueError(Exception):
     """Raised by decode() when a tree contains a value that cannot be
@@ -50,13 +60,20 @@ def _stable_repr(value: Any) -> str:
     return r
 
 
+def opaque_digest(type_name: str, stable_repr: str) -> str:
+    """Fingerprint of an unserializable value. Shared with the scrubbers so a
+    scrubbed repr can be re-fingerprinted rather than compared against a
+    digest computed from the pre-scrub text."""
+    return hashlib.sha256(
+        "{}:{}".format(type_name, stable_repr).encode("utf-8")
+    ).hexdigest()[:16]
+
+
 def _opaque(value: Any) -> dict:
     type_name = "{}.{}".format(type(value).__module__, type(value).__qualname__)
     stable = _stable_repr(value)
-    digest = hashlib.sha256(
-        "{}:{}".format(type_name, stable).encode("utf-8")
-    ).hexdigest()[:16]
-    return {"__opaque__": {"type": type_name, "repr": stable, "digest": digest}}
+    return {"__opaque__": {"type": type_name, "repr": stable,
+                           "digest": opaque_digest(type_name, stable)}}
 
 
 def encode(value: Any, _depth: int = 0, _seen: Any = None) -> Any:
@@ -108,7 +125,8 @@ def encode(value: Any, _depth: int = 0, _seen: Any = None) -> Any:
             node["frozen"] = True
         return node
     if isinstance(value, dict):
-        if all(isinstance(k, str) for k in value):
+        if all(isinstance(k, str) for k in value) and \
+                not any(k in RESERVED_KEYS for k in value):
             return {k: encode(v, _depth + 1, _seen) for k, v in value.items()}
         pairs = [
             [encode(k, _depth + 1, _seen), encode(v, _depth + 1, _seen)]

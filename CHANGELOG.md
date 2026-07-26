@@ -1,6 +1,71 @@
 # Changelog
 
 
+## 0.13.0 — 2026-07-26 (comparison-core audit: three false matches fixed)
+
+An audit of the comparison core found cases where NoDrift reported
+**matched** for values that behave differently. For a verification harness
+those are the worst possible defect, so they lead this release. Every fix
+below is pinned by a regression test in `tests/test_v013.py` (221 tests,
+up from 173); all 11 validation cohorts still replay clean, and the
+seeded-bug rewrite in `examples/legacy_pricing` is still caught.
+
+Fixed — silent false matches:
+
+- **`frozenset` vs `set` and `bytes` vs `bytearray` compared as equal.**
+  Both pairs share an encoding marker and are told apart by a sibling flag
+  (`frozen`, `mutable`) that the differ recursed straight past. A rewrite
+  returning a mutable buffer where the original returned an immutable one
+  now diverges as a `type_mismatch`.
+- **A dict could impersonate the type it names.** `{"__tuple__": [1, 2]}`
+  encoded byte-identically to the tuple `(1, 2)`, so the two compared as
+  equal *and* `decode()` handed the rewrite a tuple where the original got
+  a dict. String-keyed dicts holding a reserved marker key now encode
+  through the explicit pair form. Existing traces are unaffected (that form
+  already existed); re-recording such a dict changes its trace id.
+
+Fixed — accuracy of evidence:
+
+- `float_tolerance` was silently ignored inside dataclasses and enum
+  values; they now compare field-by-field, which also means a one-field
+  mismatch reports `output.<field>` instead of dumping both objects at
+  `output` — the hint the agent loop actually needs.
+- Scrubbers could not normalize noise inside unserializable values: the
+  `repr` was scrubbed but its fingerprint was not recomputed, so two
+  now-identical reprs were still reported as differing. Digests are
+  re-derived after scrubbing.
+- `record_class` wrapped already-wrapped static and class methods on a
+  second call, recording two traces per call and inflating the behavior
+  count.
+- A harness error mid-trace counted the trace as replayed twice, so
+  reports and signed attestations could claim more replays than there were
+  traces.
+- `replay --in-order` sorted by wall-clock timestamp before the monotonic
+  `seq` counter; a clock step during recording could misorder the very
+  replay whose purpose is chronology.
+- Divergence reports capped at 25 per trace stopped silently. A capped
+  trace now carries an explicit `divergences_truncated` entry.
+
+Fixed — gate and agent robustness:
+
+- The quality gate only recognized fully dotted calls, so
+  `from subprocess import run; run(..., shell=True)`,
+  `from os import system`, and `import os as o` all passed unblocked.
+  Import bindings are now resolved before the rules run.
+- The built-in agent crashed the whole loop on a response that did not
+  match the documented shape (empty `choices`, missing `message`, or a
+  non-JSON body from a proxy). These now fail the iteration cleanly —
+  the case that matters for `openai-compatible` third-party endpoints.
+
+Added:
+
+- `nodrift.unwrap()` and `nodrift.unwrap_class()` undo `wrap()` /
+  `record_class()`; instrumentation previously lasted for the life of the
+  process and leaked between tests sharing an interpreter.
+- Boundary resolution is cached per replay run (10k-behavior replays no
+  longer re-resolve per trace), and the recorder's dropped-trace counter is
+  lock-guarded so threaded recording cannot lose counts.
+
 ## 0.12.0 — 2026-07-06 (rename: Retrace -> NoDrift)
 
 - the product is now **NoDrift** (package `nodrift`, CLI `nodrift`,

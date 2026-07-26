@@ -129,4 +129,13 @@ class TestLimits:
         expected = {"k%d" % i: i for i in range(100)}
         actual = {"k%d" % i: i + 1 for i in range(100)}
         divs, _ = _diff(expected, actual)
-        assert len(divs) == differ.MAX_DIVERGENCES_PER_TRACE
+        # the cap holds, plus one marker saying the report was truncated --
+        # a silently capped report understates the divergence
+        assert len(divs) == differ.MAX_DIVERGENCES_PER_TRACE + 1
+        assert _kinds(divs)[-1] == differ.KIND_TRUNCATED
+        assert _kinds(divs)[:-1] == [differ.KIND_VALUE] * \
+            differ.MAX_DIVERGENCES_PER_TRACE
+
+    def test_uncapped_report_has_no_truncation_marker(self):
+        divs, _ = _diff({"a": 1}, {"a": 2})
+        assert _kinds(divs) == [differ.KIND_VALUE]
