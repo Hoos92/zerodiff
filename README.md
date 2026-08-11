@@ -37,6 +37,9 @@ nodrift demo    # 30-second guided example: record a legacy function,
 nodrift init    # scaffold nodrift.toml + .gitignore for your project
 ```
 
+Examples below are written for bash; in PowerShell, join the `\`-continued
+lines into a single line (or swap `\` for a backtick).
+
 Gate it in your existing test suite with one line:
 
 ```python

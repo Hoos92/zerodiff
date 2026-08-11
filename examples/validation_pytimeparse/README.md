@@ -9,7 +9,7 @@ Exactly the kind of permissive-grammar edge a rewrite "fixes" and breaks.
 
 ```bash
 pip install pytimeparse
-printf 'your-team-signing-key!!' > team.key
+printf 'your-team-signing-key!!' > team.key   # PowerShell: Set-Content team.key 'your-team-signing-key!!'
 
 nodrift migrate --driver "python run_scenarios.py" \
     --agent "python install_agent.py" --max-iters 3 \

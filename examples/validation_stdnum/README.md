@@ -6,7 +6,7 @@ exception hierarchy, and country-specific IBAN plug-ins.
 
 ```bash
 pip install python-stdnum
-printf 'your-team-signing-key!!' > team.key
+printf 'your-team-signing-key!!' > team.key   # PowerShell: Set-Content team.key 'your-team-signing-key!!'
 
 nodrift migrate \
     --driver "python run_scenarios.py" \

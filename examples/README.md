@@ -1,5 +1,14 @@
 # Examples index
 
+**Before you start:** every example records the *real* upstream library,
+so each one needs network access and `pip install <that library>` first
+(the command is in each README). No traces are committed — the point is
+that you regenerate them and see the same divergences we did.
+
+Commands are written for bash. In PowerShell, join the `\`-continued
+lines into one, and write a signing key with
+`Set-Content team.key 'your-team-signing-key!!'` instead of `printf`.
+
 | directory | what it demonstrates |
 |---|---|
 | `legacy_pricing/` | the core loop on a toy module: equivalent rewrite 48/48, buggy rewrite caught (5 seeded bug classes) |
