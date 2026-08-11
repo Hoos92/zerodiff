@@ -30,8 +30,8 @@ runs:
   steps:
     - name: Install nodrift
       shell: bash
-      # once published: pip install nodrift-harness
-      run: pip install "nodrift-harness @ git+https://github.com/Hoos92/nodrift"
+      # once published on PyPI this becomes simply: pip install nodrift
+      run: pip install "nodrift @ git+https://github.com/Hoos92/nodrift"
     - name: Replay recorded behaviors
       shell: bash
       working-directory: ${{ inputs.workdir }}

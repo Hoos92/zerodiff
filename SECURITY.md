@@ -8,8 +8,12 @@ for suspected vulnerabilities.
 
 ## Security model, stated plainly
 
-- **NoDrift makes no network calls.** Recording, replay, reporting, and
-  attestation are entirely local. Nothing is uploaded anywhere.
+- **The core harness makes no network calls.** Recording, replay,
+  reporting, and attestation are entirely local; nothing is uploaded
+  anywhere. The one exception is the optional built-in agent
+  (`--llm` / `nodrift llm-check`), which calls the LLM endpoint you
+  configure with your key — see the `--llm` note below for exactly what
+  it sends.
 - **Traces contain real runtime data.** Treat the traces directory like a
   database dump: gitignored by default (`nodrift init`), redactable at
   record time via `redact_fields` (redacted values never reach disk).

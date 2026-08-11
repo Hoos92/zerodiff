@@ -12,6 +12,8 @@ mentions and no reviewer would guess.
 
 ```bash
 pip install semver
+printf 'your-team-signing-key!!' > team.key
+
 nodrift migrate --driver "python run_scenarios.py" \
     --agent "python install_agent.py" --max-iters 3 \
     --attest --key-file team.key

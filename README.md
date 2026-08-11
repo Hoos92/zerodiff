@@ -209,15 +209,26 @@ signed tamper-evident attestations (`nodrift attest`), verification history
 
 ## Status
 
-v0.4 — Python 3.8+, function-level boundaries, zero runtime dependencies.
-0.2 added zero-edit auto-instrumentation (`--include`), subprocess-isolated
-replay with crash/hang detection (`--isolate`), and record-time redaction.
-0.3 added the agent loop (`nodrift loop`), the MCP server (`nodrift mcp`),
-and the GitHub Action / Claude Code hook integrations. 0.4 added
-`nodrift init`/`demo`, the `nodrift.testing` pytest helper, JUnit output,
-and the Enterprise attestation/history layer. 0.5 added `nodrift migrate`
-— the end-to-end verified migration pipeline.
-Roadmap: HTTP service-level recording, side-effect interception,
-dependency-upgrade guard.
+**v0.14** — Python 3.8+, function-level boundaries, zero runtime
+dependencies, 251 tests.
+
+The verb set is stable: `record` / `replay` / `report` (0.1–0.2, with
+zero-edit `--include` instrumentation and `--isolate` crash-safe replay),
+`loop` + `mcp` + the GitHub Action and Claude Code hook (0.3),
+`init` / `demo` / `nodrift.testing` / JUnit output and the Enterprise
+attestation + history layer (0.4), `migrate` — the end-to-end verified
+migration pipeline (0.5), the security/quality gate (0.7), argument-mutation
+and stateful-code support with parallel replay (0.8), the built-in `--llm`
+agent (0.9), `insights` (0.10), and `guard` — the dependency-upgrade
+safety net (0.11).
+
+0.12 renamed the project from Retrace to NoDrift. 0.13 and 0.14 were
+correctness audits of the harness itself: 0.13 fixed three cases where the
+differ reported a *false match*, and 0.14 fixed cases where a verdict was
+reported without the evidence to back it (a zero-behavior replay reading as
+a pass, attestations signing failed runs) — see the
+[CHANGELOG](CHANGELOG.md).
+
+Roadmap: HTTP service-level recording and side-effect interception.
 
 MIT licensed.

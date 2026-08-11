@@ -15,6 +15,8 @@ First pass: **105 of 113 matched**. The 8 misses:
 
 ```bash
 pip install humanfriendly
+printf 'your-team-signing-key!!' > team.key
+
 nodrift migrate --driver "python run_scenarios.py" \
     --agent "python install_agent.py" --max-iters 3 \
     --attest --key-file team.key

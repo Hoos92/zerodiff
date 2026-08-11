@@ -95,7 +95,7 @@ pointed at disposable environments until side-effect interception ships.
 
 Tests encode what someone *believed* the code should do; recordings encode
 what it *actually does*, including the quirks nobody wrote down. In our
-validation across 7 real libraries (12,251 recorded behaviors), every
+validation across 11 real libraries (12,952 recorded behaviors), every
 single clean-room rewrite passed casual inspection and still diverged from
 recorded reality — see [VALIDATION.md](VALIDATION.md). NoDrift complements
 tests; it doesn't replace them.

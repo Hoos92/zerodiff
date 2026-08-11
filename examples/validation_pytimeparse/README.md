@@ -9,6 +9,8 @@ Exactly the kind of permissive-grammar edge a rewrite "fixes" and breaks.
 
 ```bash
 pip install pytimeparse
+printf 'your-team-signing-key!!' > team.key
+
 nodrift migrate --driver "python run_scenarios.py" \
     --agent "python install_agent.py" --max-iters 3 \
     --attest --key-file team.key
