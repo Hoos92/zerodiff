@@ -77,7 +77,26 @@ Fixed — silent config failure:
   reject unsupported syntax. It now raises, pointing at the flat
   `regex = ["pattern", ...]` form that does work on the fallback parser.
 
-247 tests (up from 221). All 11 validation cohorts still replay clean and
+Polish:
+
+- `replay --jobs 0` (or negative) silently ran serial, *non-isolated*
+  replay despite `--jobs` advertising isolated workers; it's now rejected.
+- A report that parses as JSON but isn't a NoDrift report produced a raw
+  `KeyError` traceback instead of a readable error.
+- `load_unique_traces` deduplicated id-less traces against each other
+  (`None == None`), silently collapsing hand-edited or malformed traces
+  into one behavior.
+- `nodrift demo` created a new temp directory on every run and never
+  removed it. It now reuses one stable location — the demo intentionally
+  leaves its files for inspection, so deleting them would defeat the point.
+- `nodrift record`'s summary reported the trace *directory's* total
+  boundary count as though this run had touched them all; when appending
+  to existing traces it now says so.
+- MCP server docstring said "two tools" (it exposes three — `nodrift_quality`
+  since 0.8.0); dead imports removed; a dead conditional in the JUnit
+  failure count simplified.
+
+251 tests (up from 221). All 11 validation cohorts still replay clean and
 the seeded-bug rewrite in `examples/legacy_pricing` is still caught.
 
 ## 0.13.0 — 2026-07-26 (comparison-core audit: three false matches fixed)

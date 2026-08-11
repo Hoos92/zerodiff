@@ -298,6 +298,47 @@ class TestFixPromptCleanup:
         assert "*.key" in GITIGNORE_LINES
 
 
+class TestPolish:
+    def test_jobs_below_one_is_rejected(self, project, capsys):
+        # 0/negative silently ran serial NON-isolated replay, which is not
+        # what --jobs advertises
+        assert cli.main(["replay", "-t", "traces", "--jobs", "0"]) == \
+            cli.EXIT_ERROR
+        assert "--jobs must be >= 1" in capsys.readouterr().err
+
+    def test_malformed_report_gets_a_clean_error(self, tmp_path,
+                                                 monkeypatch, capsys):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "bad.json").write_text('{"parses": "but not a report"}',
+                                           encoding="utf-8")
+        assert cli.main(["report", "-i", "bad.json"]) == cli.EXIT_ERROR
+        assert "malformed report" in capsys.readouterr().err
+
+    def test_idless_traces_are_not_collapsed(self, tmp_path):
+        from nodrift import store
+
+        trace_dir = tmp_path / "traces"
+        trace_dir.mkdir()
+        rows = []
+        for i in (1, 2):
+            rows.append(json.dumps({
+                "schema": store.SCHEMA_VERSION,
+                "boundary": {"kind": "function", "target": "m.f"},
+                "input": {"args": [i], "kwargs": {}},
+                "output": {"type": "return", "value": i},
+                "meta": {"seq": i}}))
+        (trace_dir / "m.f.jsonl").write_text("\n".join(rows) + "\n",
+                                             encoding="utf-8")
+        # both lack "id"; dedup on None would silently drop one behavior
+        assert len(store.load_unique_traces(str(trace_dir))) == 2
+
+    def test_junit_failure_count_matches_failing_boundaries(self, project):
+        with pytest.raises(BehaviorMismatch) as exc:
+            verify_traces("traces", {"v14leg_a": "v14new_bad"})
+        xml_text = report_mod.render_junit(exc.value.report)
+        assert 'failures="1"' in xml_text
+
+
 class TestConfigArrayOfTables:
     def test_array_of_tables_raises_clear_error(self):
         with pytest.raises(ValueError, match=r"\[\[array-of-tables\]\]"):

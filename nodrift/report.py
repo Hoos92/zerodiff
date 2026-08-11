@@ -203,9 +203,9 @@ def render_junit(report: Dict[str, Any]) -> str:
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<testsuite name="nodrift" tests="%d" failures="%d">'
             "%s</testsuite>\n"
-            % (len(s["boundaries"]),
-               sum(1 for t in by_boundary if by_boundary[t]),
-               "".join(cases)))
+            # by_boundary only ever gains keys with a non-empty list, so
+            # its length IS the failure count
+            % (len(s["boundaries"]), len(by_boundary), "".join(cases)))
 
 
 def _md_code_safe(value: Any) -> str:

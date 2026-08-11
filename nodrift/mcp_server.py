@@ -2,11 +2,13 @@
 
 Speaks Model Context Protocol (JSON-RPC 2.0, newline-delimited, stdio) with
 zero dependencies, exposing verification to any MCP-capable coding agent —
-Claude Code, Codex, Copilot, Cursor. Two tools:
+Claude Code, Codex, Copilot, Cursor. Three tools:
 
 - nodrift_replay: replay recorded traces against the rewrite, get the
   summary and every divergence with hints
 - nodrift_report: read an existing nodrift-report.json
+- nodrift_quality: run the security/quality gate over given files, so an
+  agent can check its own work before replaying
 
 Register with e.g.:  claude mcp add nodrift -- nodrift mcp
 """
@@ -16,7 +18,7 @@ import sys
 from typing import Any, Dict, Optional
 
 from . import __version__, report as report_mod
-from .config import Config, load_config
+from .config import load_config
 from .replayer import replay_all
 
 PROTOCOL_VERSION = "2024-11-05"

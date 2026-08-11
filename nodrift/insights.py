@@ -10,7 +10,6 @@ import json
 import os
 from typing import Any, Dict, List
 
-from . import report as report_mod
 from .enterprise import HISTORY_DIR, HISTORY_FILE
 
 

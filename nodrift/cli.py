@@ -39,9 +39,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_record.add_argument("--include", action="append", default=[],
                           metavar="PATTERN",
                           help="auto-instrument matching modules with no "
-                               "source edits (e.g. --include billing or "
-                               "--include 'billing.*'; repeatable). Wraps "
-                               "public module-level functions. Injects a "
+                               "source edits (repeatable). --include "
+                               "billing matches the module/package itself; "
+                               "--include 'billing.*' matches its "
+                               "submodules but NOT billing itself, so pass "
+                               "both to cover a package and its children. "
+                               "Wraps public module-level functions. Injects a "
                                "sitecustomize via PYTHONPATH, which shadows "
                                "any existing sitecustomize for this run.")
     p_record.add_argument("--config", default=None,
@@ -292,6 +295,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     except (FileNotFoundError, ValueError) as exc:
         print("nodrift: error: {}".format(exc), file=sys.stderr)
         return EXIT_ERROR
+    except KeyError as exc:
+        # a report that parses as JSON but isn't a nodrift report (or is
+        # from a future schema) should say so, not dump a traceback
+        print("nodrift: error: malformed report -- missing {}. Regenerate "
+              "it with `nodrift replay`.".format(exc), file=sys.stderr)
+        return EXIT_ERROR
 
 
 def make_runner(args: argparse.Namespace, cfg):
@@ -378,8 +387,15 @@ def _cmd_record(args: argparse.Namespace) -> int:
         if boot_dir is not None:
             shutil.rmtree(boot_dir, ignore_errors=True)
     after, boundaries = _count_traces(trace_dir), _count_boundaries(trace_dir)
-    print("nodrift: recorded {} calls across {} boundaries -> {}".format(
-        after - before, boundaries, trace_dir))
+    # boundaries is the whole directory's total; when appending to existing
+    # traces, say so rather than implying this run touched them all
+    if before:
+        print("nodrift: recorded {} calls -> {} ({} boundaries in the "
+              "directory total)".format(after - before, trace_dir,
+                                        boundaries))
+    else:
+        print("nodrift: recorded {} calls across {} boundaries -> {}".format(
+            after - before, boundaries, trace_dir))
     if proc.returncode != 0:
         print("nodrift: note: recorded command exited with code {}".format(
             proc.returncode), file=sys.stderr)
@@ -429,6 +445,10 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     mappings = cfg.mappings()
     mappings.update(_parse_map_args(args.map))
 
+    if args.jobs < 1:
+        # 0/negative silently fell through to serial, NON-isolated replay,
+        # which is not what --jobs advertises
+        raise ValueError("--jobs must be >= 1, got {}".format(args.jobs))
     if args.jobs > 1 and args.in_order:
         raise ValueError("--jobs and --in-order are incompatible: "
                          "parallel shards cannot preserve global order")

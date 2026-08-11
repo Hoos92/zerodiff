@@ -61,6 +61,11 @@ def load_unique_traces(trace_dir: str) -> List[Dict[str, Any]]:
     unique = []
     for trace in iter_traces(trace_dir):
         tid = trace.get("id")
+        if tid is None:
+            # a malformed/hand-edited trace with no id must not dedup
+            # against every other id-less trace and silently drop behaviors
+            unique.append(trace)
+            continue
         if tid in seen:
             continue
         seen.add(tid)

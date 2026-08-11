@@ -124,7 +124,11 @@ def cmd_demo() -> int:
     print("nodrift demo: a legacy function, a modernized rewrite, and the")
     print("question that matters: does the rewrite behave the same?")
     print()
-    demo_dir = tempfile.mkdtemp(prefix="nodrift-demo-")
+    # a stable path, not mkdtemp: the demo deliberately leaves its files
+    # behind for inspection (it prints the location below), so a fresh
+    # random directory per run would pile up in temp forever
+    demo_dir = os.path.join(tempfile.gettempdir(), "nodrift-demo")
+    os.makedirs(demo_dir, exist_ok=True)
     files = {"demo_legacy.py": DEMO_LEGACY,
              "demo_rewrite.py": DEMO_REWRITE_BUGGY,
              "demo_driver.py": DEMO_DRIVER,
