@@ -1,6 +1,7 @@
 """`nodrift init` and `nodrift demo` — the 60-second on-ramp."""
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -126,8 +127,11 @@ def cmd_demo() -> int:
     print()
     # a stable path, not mkdtemp: the demo deliberately leaves its files
     # behind for inspection (it prints the location below), so a fresh
-    # random directory per run would pile up in temp forever
+    # random directory per run would pile up in temp forever. Reset it
+    # each run so the demo always tells the same story instead of
+    # appending to the previous run's traces.
     demo_dir = os.path.join(tempfile.gettempdir(), "nodrift-demo")
+    shutil.rmtree(demo_dir, ignore_errors=True)
     os.makedirs(demo_dir, exist_ok=True)
     files = {"demo_legacy.py": DEMO_LEGACY,
              "demo_rewrite.py": DEMO_REWRITE_BUGGY,
