@@ -13,7 +13,8 @@ Three implementations of the same module:
 Run the loop (from this directory):
 
 ```bash
-# 1. record what the legacy code actually does (~90 calls, 3 boundaries)
+# 1. record what the legacy code actually does
+#    (~90 calls -> 48 unique behaviors, across 3 boundaries)
 nodrift record -o traces -- python driver.py
 
 # 2. replay against the good rewrite -> everything matches, exit code 0

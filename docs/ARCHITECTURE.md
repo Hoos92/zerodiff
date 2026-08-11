@@ -21,7 +21,7 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 | `autohook.py`   | zero-edit auto-instrumentation: meta-path finder that wraps public module-level functions of modules matching `--include` patterns; injected into child processes via a temporary `sitecustomize` |
 | `worker.py`     | isolated replay worker (`--isolate`): JSON-lines protocol on a duplicated fd while user prints divert to stderr; crashes/hangs become reported behavior |
 | `loop.py`       | agent feedback loop (`nodrift loop`): replay → fix prompt with all divergences → invoke any agent CLI → repeat; always isolates so agent edits are re-imported fresh |
-| `mcp_server.py` | zero-dep MCP server (`nodrift mcp`): JSON-RPC 2.0 over stdio exposing nodrift_replay/nodrift_report to MCP-capable agents; isolates by default because the server is long-lived |
+| `mcp_server.py` | zero-dep MCP server (`nodrift mcp`): JSON-RPC 2.0 over stdio exposing nodrift_replay/nodrift_report/nodrift_quality to MCP-capable agents; isolates by default because the server is long-lived, and restores its working directory after every call |
 | `testing.py`    | `verify_traces()` one-liner for pytest/unittest: raises BehaviorMismatch (an AssertionError) with a divergence digest |
 | `scaffold.py`   | `nodrift init` (project scaffolding) and `nodrift demo` (guided 30-second example) |
 | `enterprise.py` | commercial tier (see COMMERCIAL.md): HMAC-signed tamper-evident attestations, replay history |
@@ -34,7 +34,7 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 | `replayer.py`   | resolves each recorded boundary through the old→new mapping, decodes inputs, invokes the replacement with per-call isolation |
 | `differ.py`     | deep structural diff producing typed `Divergence` objects with paths and agent-actionable hints; float tolerance lives here |
 | `report.py`     | `nodrift-report.json` (machine/agent-first) and `nodrift-report.md` (human) |
-| `cli.py`        | `nodrift record | replay | report`; exit codes 0/1/2 |
+| `cli.py`        | all 15 subcommands (`record`, `replay`, `report`, `loop`, `migrate`, `guard`, `quality`, `insights`, `mcp`, `init`, `demo`, `llm-check`, `attest`, `verify-attestation`, `history`); exit codes 0/1/2 |
 
 ## Trace schema (JSONL, one call per line)
 

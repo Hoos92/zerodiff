@@ -186,8 +186,9 @@ the trace files, not merely the report.
   bugs (all caught). Full loop in under a minute.
 - `examples/migration_dateutil/` — a **real PyPI package**: the behavior of
   `dateutil.easter` (1,145 recorded behaviors) verified against a clean
-  modern rewrite, with zero source edits. NoDrift caught the one divergence
-  a human review would wave through. Write-up with numbers:
+  modern rewrite, with zero source edits. NoDrift caught the one *class* of
+  divergence — 4 exception-message mismatches — that a human review would
+  wave through. Write-up with numbers:
   [docs/CASE_STUDY.md](docs/CASE_STUDY.md).
 - `examples/validation_*` — ten more real GitHub libraries (`roman`,
   `inflection`, `humanize`, `word2number`, `python-slugify`, `num2words`,
@@ -205,7 +206,8 @@ Questions like "do I need an LLM for this?" (no) are answered in the
 The core harness is MIT and always will be. Organization-grade assurance —
 signed tamper-evident attestations (`nodrift attest`), verification history
 (`nodrift history`) — is source-available under a commercial license: see
-[COMMERCIAL.md](COMMERCIAL.md).
+[COMMERCIAL.md](COMMERCIAL.md) for what's covered and
+[docs/PRICING.md](docs/PRICING.md) for the tiers.
 
 ## Status
 

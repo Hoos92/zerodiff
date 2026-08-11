@@ -1,4 +1,8 @@
-# Pricing (draft)
+# Pricing
+
+Two paid SKUs, one product line. Both grant the same commercial license
+to the assurance module (`nodrift attest` / `nodrift history`); they
+differ in scope of support and engagement, not in which code you may run.
 
 ## Free — MIT, forever
 Everything a developer needs to verify AI-written changes: record,
@@ -7,11 +11,11 @@ gate, scrubbing/redaction, the agent loop (BYO agent or built-in with
 your own LLM key), MCP server, GitHub Action, `nodrift insights`.
 
 ## Team — $99/repo/month (early-adopter: $49)
-Everything in Free plus the Enterprise module for production use:
-signed tamper-evident attestations (`nodrift attest`, code-pinned, git
-commit recorded), verification history and trends, priority email
-support. For teams shipping AI-assisted changes who need evidence, not
-just green checks.
+Everything in Free, plus a commercial license for the assurance module in
+production: signed tamper-evident attestations (`nodrift attest`,
+code-pinned, git commit recorded), verification history and trends, and
+priority email support. For teams shipping AI-assisted changes who need
+evidence, not just green checks.
 
 ## Enterprise — from $15k/year
 Team, plus: verified-migration engagements (we run the pipeline on your

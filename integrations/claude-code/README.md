@@ -8,8 +8,10 @@ Two ways to wire NoDrift into Claude Code, from loosest to strictest.
 claude mcp add nodrift -- nodrift mcp
 ```
 
-Claude Code then has two tools: `nodrift_replay` (replay traces against the
-current code, get divergences with hints) and `nodrift_report`. Ask Claude
+Claude Code then has three tools: `nodrift_replay` (replay traces against
+the current code, get divergences with hints), `nodrift_report` (read an
+existing report), and `nodrift_quality` (run the security/quality gate over
+files it just wrote, before replaying). Ask Claude
 to "verify the rewrite with nodrift" and it can run and read the results
 natively. Replay is subprocess-isolated by default, so repeated calls test
 the *current* files, not stale imports.

@@ -10,10 +10,12 @@ instrumentation, the agent loop, the MCP server, the GitHub Action and
 Claude Code hook, `nodrift init`, `nodrift demo`, and the
 `nodrift.testing` pytest helper. Use it anywhere, for anything.
 
-## NoDrift Enterprise — evidence and assurance for organizations
+## The assurance module — evidence for organizations
 
 The `nodrift/enterprise.py` module is source-available for evaluation and
-non-production use; **production use requires a commercial license**:
+non-production use; **production use requires a commercial license**. Both
+paid tiers — Team and Enterprise — include that license; see
+[docs/PRICING.md](docs/PRICING.md) for what separates them.
 
 | feature | what it's for |
 |---|---|
@@ -27,6 +29,7 @@ long-term evidence retention.
 
 ## Get a license
 
-Email <husamalkinani92@gmail.com> with "NoDrift Enterprise" in the
-subject. Early-adopter terms are deliberately simple and inexpensive —
-what matters most right now is working with real migrations.
+Email <husamalkinani92@gmail.com> with "NoDrift license" in the subject,
+and say which tier fits ([docs/PRICING.md](docs/PRICING.md)). Early-adopter
+terms are deliberately simple and inexpensive — what matters most right
+now is working with real migrations.

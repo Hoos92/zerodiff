@@ -2,8 +2,8 @@
 
 The Python port of Ruby on Rails' inflector — a decade of accumulated regex
 rules for pluralization, camelization, and friends. The hardest of the
-three validations: behavior lives in long, ordered rule tables full of
-special cases nobody remembers.
+first validation cohort: behavior lives in long, ordered rule tables full
+of special cases nobody remembers.
 
 ```bash
 pip install inflection

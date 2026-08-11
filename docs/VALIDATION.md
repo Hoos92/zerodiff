@@ -1,8 +1,15 @@
-# Validation: three real GitHub libraries through the NoDrift loop
+# Validation: 11 real GitHub libraries through the NoDrift loop
+
+This document accumulates six cohorts, run over time as NoDrift grew.
+Program totals are at the [bottom](#program-totals-all-cohorts--dateutil-case-study):
+**11 libraries, 12,952 recorded behaviors, 11/11 rewrites wrong on the
+first pass, 169 divergences — all brought to 100%.**
+
+## First cohort: three shapes of behavior
 
 To validate NoDrift beyond the [dateutil case study](CASE_STUDY.md), the
 same loop — record real behavior with zero source edits, write a clean-room
-modern rewrite, replay, fix from hints — was run against three more real
+modern rewrite, replay, fix from hints — was run against three real
 libraries, chosen for three different *shapes* of behavior:
 
 | library | GitHub | behavior shape | behaviors verified | first pass | passes to green |
