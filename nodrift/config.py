@@ -200,6 +200,19 @@ def _parse_toml_subset(text: str, path: str) -> Dict[str, Any]:
         if not line or line.startswith("#"):
             continue
         where = "%s:%d" % (path, lineno)
+        if line.startswith("[["):
+            # [[table.array]] (e.g. [[scrub.regex]]) looks like a section
+            # to _SECTION_RE (it just sees an extra bracket pair as part of
+            # the name) and would silently misparse into a garbage key
+            # instead of raising -- must be caught explicitly instead of
+            # falling through.
+            raise ValueError(
+                "nodrift.toml: [[array-of-tables]] syntax is not supported "
+                "by the built-in reader (%s). Either upgrade to Python "
+                "3.11+ (uses the stdlib tomllib parser, which supports it), "
+                "or -- for [scrub] regex specifically -- use a flat array "
+                "of pattern strings instead: regex = [\"pattern1\", "
+                "\"pattern2\"]." % where)
         m = _SECTION_RE.match(line)
         if m:
             current = root

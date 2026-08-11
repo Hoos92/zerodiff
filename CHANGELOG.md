@@ -1,6 +1,52 @@
 # Changelog
 
 
+## 0.14.0 — 2026-08-10 (trust audit: "pass" verdicts that weren't)
+
+A second, independent audit pass over the modules v0.13.0 didn't cover
+found two ways NoDrift could report a clean pass without having verified
+anything, plus a silent config failure. Same defect class as v0.13.0's
+false matches, one layer up: not "compared wrong" but "claimed a verdict
+it hadn't earned."
+
+Fixed — verdicts that weren't:
+
+- **Zero replayed behaviors reported `matched`.** An empty or wrong
+  `--traces` path, a CI artifact that failed to restore, or a `record`
+  step that silently captured nothing all produced "matched 0, diverged
+  0" and **exit 0** — a clean pass backed by no evidence at all. This
+  reached every gating surface: `nodrift replay`, `nodrift guard check`,
+  and `nodrift.testing.verify_traces()` (the one-line CI gate the README
+  recommends). Reports now carry a distinct `no_data` verdict; the two
+  CLI commands exit `2` with an explanatory message, and `verify_traces()`
+  raises the new `NoBehaviorsReplayed`. `nodrift record` already guarded
+  the equivalent case on the recording side — replay simply never did.
+- **Attestations could sign, and later "verify" as clean, a failed
+  verification.** `nodrift attest` stored the report's verdict but never
+  checked it, and `verify-attestation` validated only the signature and
+  digests — so an attestation of a diverged run verified green and exited
+  0. `attest` now refuses a non-matched verdict unless you explicitly pass
+  `--allow-diverged` (for deliberately attesting a failure), and
+  `verify-attestation` reports a non-matched verdict as a problem.
+- **`nodrift migrate --attest` didn't pin the rewrite it just verified.**
+  It never passed the rewrite files to the attestation, so — unlike
+  `nodrift attest --code` — a backdoor appended to the verified rewrite
+  afterwards was invisible to `verify-attestation`. Since the README's
+  flagship `migrate` example ends in `--attest` with no `--code`, the
+  most-copied path produced the weakest evidence. `migrate` now pins the
+  mapped rewrite files by default (reusing `loop.rewrite_files`).
+
+Fixed — silent config failure:
+
+- `[[scrub.regex]]` (standard TOML array-of-tables) silently misparsed
+  into a garbage key on Python 3.8–3.10, so configured regex scrubbers
+  never ran and no error was raised — despite the reader's own promise to
+  reject unsupported syntax. It now raises, pointing at the flat
+  `regex = ["pattern", ...]` form that does work on the fallback parser.
+
+236 tests (up from 221). All 11 validation cohorts still replay clean and
+the seeded-bug rewrite in `examples/legacy_pricing` is still caught.
+
 ## 0.13.0 — 2026-07-26 (comparison-core audit: three false matches fixed)
 
 An audit of the comparison core found cases where NoDrift reported

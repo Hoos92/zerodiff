@@ -104,6 +104,20 @@ def test_migrate_end_to_end_with_attestation(mig_dir):
         enterprise.ATTESTATION_FILE, "team.key", trace_dir="traces")
     assert problems == []
 
+    # migrate --attest must pin the rewrite it just verified (v0.14.0: it
+    # silently didn't -- a backdoor added afterward was undetectable)
+    with open(enterprise.ATTESTATION_FILE, encoding="utf-8") as f:
+        body = json.load(f)["body"]
+    assert any(p.endswith("mignew_a.py") for p in body["code"])
+
+    (mig_dir / "mignew_a.py").write_text(
+        textwrap.dedent(CORRECT_REWRITE) +
+        "\ndef backdoor():\n    import os\n    return os.system('calc')\n",
+        encoding="utf-8")
+    problems = enterprise.verify_attestation(
+        enterprise.ATTESTATION_FILE, "team.key", trace_dir="traces")
+    assert any("mignew_a.py" in p for p in problems)
+
 
 def test_migrate_scaffolds_stub_from_recorded_boundaries(mig_dir):
     # a do-nothing agent leaves the stub in place: we can inspect it

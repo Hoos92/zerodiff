@@ -66,15 +66,28 @@ def _git_commit() -> Optional[str]:
 
 
 def build_attestation(trace_dir: str, report_path: str, key_file: str,
-                      code_paths: Optional[List[str]] = None
+                      code_paths: Optional[List[str]] = None,
+                      allow_diverged: bool = False
                       ) -> Dict[str, Any]:
     """A tamper-evident evidence bundle: digests of every input that
     produced the verification verdict, HMAC-signed with the team key.
-    ``code_paths`` optionally pins the rewrite source files that passed."""
+    ``code_paths`` optionally pins the rewrite source files that passed.
+
+    Refuses to attest a non-matched verdict by default: signed evidence
+    of a failed migration is easy to mistake for evidence of a passing
+    one, so creating it requires an explicit ``allow_diverged=True``."""
     _license_notice()
     key = _load_key(key_file)
     with open(report_path, "r", encoding="utf-8") as f:
         report = json.load(f)
+    if report["verdict"] != "matched" and not allow_diverged:
+        raise ValueError(
+            "refusing to attest a %r verdict (%d of %d matched) -- signed "
+            "evidence of a failed verification could be mistaken for a "
+            "pass; pass allow_diverged=True (CLI: --allow-diverged) if you "
+            "specifically need to attest the failure itself." % (
+                report["verdict"], report["summary"]["matched"],
+                report["summary"]["replayed"]))
 
     trace_files = {}
     for name in sorted(os.listdir(trace_dir)):
@@ -136,6 +149,14 @@ def verify_attestation(attestation_path: str, key_file: str,
         problems.append("signature does not verify with this key "
                         "(attestation was altered, or wrong key)")
         return problems  # nothing below is trustworthy
+
+    if body.get("verdict") != "matched":
+        s = body.get("summary", {})
+        problems.append(
+            "attestation records a %r verdict, not a pass (%s of %s "
+            "matched) -- this is signed evidence of a FAILED "
+            "verification, not a clean one" % (
+                body.get("verdict"), s.get("matched"), s.get("replayed")))
 
     if trace_dir:
         for name, recorded_digest in body["traces"].items():

@@ -24,7 +24,7 @@ from typing import Dict, List
 
 from . import report as report_mod, store
 from .config import load_config
-from .loop import run_loop
+from .loop import rewrite_files, run_loop
 from .replayer import map_target
 
 STUB_HEADER = '''\
@@ -177,9 +177,11 @@ def cmd_migrate(args) -> int:
         from .enterprise import ATTESTATION_FILE, build_attestation
         import json as json_mod
 
+        code_paths = rewrite_files(mappings, workdir) or None
         attestation = build_attestation(args.traces,
                                         report_mod.REPORT_JSON,
-                                        args.key_file)
+                                        args.key_file,
+                                        code_paths=code_paths)
         with open(ATTESTATION_FILE, "w", encoding="utf-8",
                   newline="\n") as f:
             json_mod.dump(attestation, f, indent=2)

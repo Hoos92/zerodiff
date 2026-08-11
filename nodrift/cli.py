@@ -192,6 +192,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                           help="also pin a rewrite source file's digest "
                                "into the attestation (repeatable)")
     p_attest.add_argument("-o", "--out", default=None)
+    p_attest.add_argument("--allow-diverged", action="store_true",
+                          help="attest even though the report's verdict "
+                               "is not 'matched' (signs evidence of the "
+                               "failure itself; refused by default)")
 
     p_vattest = sub.add_parser(
         "verify-attestation", help="(Enterprise) verify an attestation's "
@@ -449,6 +453,11 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         s["matched"], s["diverged"], s["skipped_unreplayable"],
         s["weak_matches"]))
     print("nodrift: report -> {} , {}".format(args.json_out, args.md_out))
+    if report["verdict"] == "no_data":
+        print("nodrift: error: 0 behaviors replayed -- this is not a pass. "
+              "Check --traces points at a directory with recorded .jsonl "
+              "traces.", file=sys.stderr)
+        return EXIT_ERROR
     if s["divergence_count"] > 0:
         _print_divergence_digest(report)
         return EXIT_DIVERGED
@@ -496,6 +505,11 @@ def _cmd_guard(args: argparse.Namespace) -> int:
     report = report_mod.build_report(result.to_dict(), args.traces, {})
     report_mod.write_reports(report)
     s = report["summary"]
+    if report["verdict"] == "no_data":
+        print("nodrift guard: ERROR -- 0 behaviors replayed, nothing was "
+              "checked. Run 'nodrift guard baseline' first, or check "
+              "--traces.", file=sys.stderr)
+        return EXIT_ERROR
     if s["divergence_count"] == 0:
         print("nodrift guard: PASS -- %d of %d recorded behaviors "
               "preserved across the change" % (s["matched"],
@@ -549,7 +563,8 @@ def _cmd_attest(args: argparse.Namespace) -> int:
     from .enterprise import ATTESTATION_FILE, build_attestation
 
     attestation = build_attestation(args.traces, args.report, args.key_file,
-                                    code_paths=args.code or None)
+                                    code_paths=args.code or None,
+                                    allow_diverged=args.allow_diverged)
     out = args.out or ATTESTATION_FILE
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(attestation, f, indent=2)

@@ -27,6 +27,18 @@ class BehaviorMismatch(AssertionError):
         super().__init__(_digest(report))
 
 
+class NoBehaviorsReplayed(AssertionError):
+    """Raised when 0 behaviors were replayed -- a wrong trace_dir, an empty
+    directory, or a failed record step must never look like a pass."""
+
+    def __init__(self, trace_dir: str) -> None:
+        self.trace_dir = trace_dir
+        super().__init__(
+            "0 behaviors replayed from %r -- this is not a pass; check "
+            "that the directory exists and contains recorded .jsonl "
+            "traces." % trace_dir)
+
+
 def _digest(report: Dict[str, Any]) -> str:
     s = report["summary"]
     lines = ["%d of %d recorded behaviors diverged "
@@ -60,6 +72,8 @@ def verify_traces(trace_dir: str = "traces",
     report = report_mod.build_report(result.to_dict(), trace_dir, merged)
     if write_reports:
         report_mod.write_reports(report)
+    if report["verdict"] == "no_data":
+        raise NoBehaviorsReplayed(trace_dir)
     if report["summary"]["divergence_count"] > 0:
         raise BehaviorMismatch(report)
     return report

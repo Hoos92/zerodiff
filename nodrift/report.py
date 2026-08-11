@@ -43,6 +43,11 @@ def build_report(result_dict: Dict[str, Any], trace_dir: str,
 
 
 def _verdict(summary: Dict[str, Any]) -> str:
+    # zero replayed behaviors is not evidence of anything -- a wrong
+    # --traces path, a failed CI artifact restore, or a record step that
+    # silently produced nothing must never look like a clean pass
+    if summary.get("replayed", 0) == 0:
+        return "no_data"
     if summary["divergence_count"] > 0:
         return "diverged"
     if summary["skipped_unreplayable"] > 0 or summary["weak_matches"] > 0:
