@@ -13,6 +13,7 @@ and repeats until every recorded behavior matches or --max-iters is hit.
 
 import os
 import subprocess
+import sys
 from typing import Dict
 
 from . import report as report_mod
@@ -153,6 +154,7 @@ def rewrite_files(mappings: Dict[str, str], workdir: str):
 
 
 AGENT_TIMED_OUT = -9999
+PROMPT_FILE = "nodrift-fix-prompt.md"
 
 
 class ShellAgent:
@@ -169,7 +171,7 @@ class ShellAgent:
 
 def run_agent(agent_cmd: str, prompt: str, workdir: str,
               agent_timeout: float = 1800.0) -> int:
-    prompt_file = os.path.join(workdir, "nodrift-fix-prompt.md")
+    prompt_file = os.path.join(workdir, PROMPT_FILE)
     with open(prompt_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(prompt)
     try:
@@ -184,6 +186,14 @@ def run_agent(agent_cmd: str, prompt: str, workdir: str,
                                   timeout=agent_timeout)
     except subprocess.TimeoutExpired:
         return AGENT_TIMED_OUT
+    finally:
+        # the prompt embeds recorded inputs/outputs AND the original
+        # module source -- it is working state, not an artifact to leave
+        # lying in the user's repo where it can be committed by accident
+        try:
+            os.remove(prompt_file)
+        except OSError:
+            pass
     return proc.returncode
 
 
@@ -228,11 +238,26 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
 
         files = rewrite_files(mappings, workdir)
         findings = []
+        unscannable = 0
         if quality_gate:
+            if mappings and not files:
+                # replay resolves the rewrite by IMPORT, the gate by
+                # filesystem path -- an importable rewrite that doesn't sit
+                # where the mapping implies (installed package, namespace
+                # package, src/ layout) would otherwise be scanned as an
+                # empty file list and pass the gate vacuously
+                print("nodrift loop: quality gate: could not locate source "
+                      "for rewrite module(s) %s under %r -- refusing to "
+                      "report a clean gate on code that was never scanned. "
+                      "Run the loop from the directory containing the "
+                      "rewrite, or pass --no-quality to skip the gate."
+                      % (", ".join(sorted(set(mappings.values()))), workdir),
+                      file=sys.stderr)
+                unscannable = 1
             findings = quality_mod.check_files(
                 files, budgets=cfg.quality_budgets(),
                 disabled=cfg.quality_disabled())
-        blocking = quality_mod.error_count(findings)
+        blocking = quality_mod.error_count(findings) + unscannable
         remaining = divergences + blocking
 
         print("nodrift loop: iteration %d: %d of %d matched, "

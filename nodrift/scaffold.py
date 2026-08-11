@@ -31,7 +31,7 @@ CONFIG_TEMPLATE = """\
 """
 
 GITIGNORE_LINES = ["traces/", "nodrift-report.json", "nodrift-report.md",
-                   ".nodrift/"]
+                   ".nodrift/", "nodrift-fix-prompt.md", "*.key"]
 
 NEXT_STEPS = """\
 nodrift: initialized.

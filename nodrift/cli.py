@@ -534,8 +534,11 @@ def _cmd_llm_check(args: argparse.Namespace) -> int:
                              api_key_env=cfg.agent_api_key_env())
         reply = agent.check()
     except AgentError as exc:
+        # a bad key/model/endpoint is a usage error, not "divergences
+        # found" -- CI branching on exit codes must be able to tell the
+        # difference between "the rewrite is wrong" and "we never ran"
         print("nodrift llm-check: FAILED: %s" % exc)
-        return EXIT_DIVERGED
+        return EXIT_ERROR
     print("nodrift llm-check: OK -- %s responded (%r)"
           % (args.llm, reply))
     return EXIT_MATCHED
@@ -564,7 +567,9 @@ def _cmd_attest(args: argparse.Namespace) -> int:
 
     attestation = build_attestation(args.traces, args.report, args.key_file,
                                     code_paths=args.code or None,
-                                    allow_diverged=args.allow_diverged)
+                                    allow_diverged=args.allow_diverged,
+                                    cfg=load_config(getattr(args, "config",
+                                                            None)))
     out = args.out or ATTESTATION_FILE
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(attestation, f, indent=2)

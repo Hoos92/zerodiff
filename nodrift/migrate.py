@@ -27,6 +27,25 @@ from .config import load_config
 from .loop import rewrite_files, run_loop
 from .replayer import map_target
 
+def split_driver(driver: str) -> List[str]:
+    """Split a --driver command line into argv.
+
+    POSIX splitting treats backslash as an escape, which silently destroys
+    Windows paths (``python scripts\\run.py`` becomes ``scriptsrun.py``).
+    Non-POSIX splitting keeps them, but leaves surrounding quotes attached
+    to the token, which would then be passed to the OS as part of the
+    filename -- so strip those back off.
+    """
+    if os.name != "nt":
+        return shlex.split(driver)
+    argv = []
+    for token in shlex.split(driver, posix=False):
+        if len(token) >= 2 and token[0] == token[-1] and token[0] in "\"'":
+            token = token[1:-1]
+        argv.append(token)
+    return argv
+
+
 STUB_HEADER = '''\
 """Rewrite target scaffolded by `nodrift migrate`.
 
@@ -137,7 +156,7 @@ def cmd_migrate(args) -> int:
                       "-o", args.traces]
         for pattern in args.include:
             record_cmd += ["--include", pattern]
-        record_cmd += ["--"] + shlex.split(args.driver)
+        record_cmd += ["--"] + split_driver(args.driver)
         if subprocess.run(record_cmd).returncode != 0:
             print("nodrift migrate: recording failed", file=sys.stderr)
             return EXIT_ERROR

@@ -101,22 +101,29 @@ def _tool_replay(args: Dict[str, Any]) -> Dict[str, Any]:
     import os
 
     workdir = args.get("workdir")
+    # this server is long-lived: leaving the process in `workdir` would
+    # silently resolve every LATER call's relative paths (including calls
+    # that pass no workdir at all) against this one's project
+    previous_cwd = os.getcwd()
     if workdir:
         os.chdir(workdir)
-    cwd = os.getcwd()
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
-    cfg = load_config(args.get("config"))
-    mappings = cfg.mappings()
-    mappings.update(args.get("map") or {})
-    # isolate defaults ON: the server is long-lived, and in-process replay
-    # would keep testing modules as they were when first imported
-    result = replay_all(args["traces_dir"], mappings, cfg,
-                        isolate=bool(args.get("isolate", True)))
-    report = report_mod.build_report(result.to_dict(), args["traces_dir"],
-                                     mappings)
-    report_mod.write_reports(report)
-    return _digest(report)
+    try:
+        cwd = os.getcwd()
+        if cwd not in sys.path:
+            sys.path.insert(0, cwd)
+        cfg = load_config(args.get("config"))
+        mappings = cfg.mappings()
+        mappings.update(args.get("map") or {})
+        # isolate defaults ON: the server is long-lived, and in-process
+        # replay would keep testing modules as they were when first imported
+        result = replay_all(args["traces_dir"], mappings, cfg,
+                            isolate=bool(args.get("isolate", True)))
+        report = report_mod.build_report(result.to_dict(),
+                                         args["traces_dir"], mappings)
+        report_mod.write_reports(report)
+        return _digest(report)
+    finally:
+        os.chdir(previous_cwd)
 
 
 def _tool_report(args: Dict[str, Any]) -> Dict[str, Any]:

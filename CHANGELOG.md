@@ -36,6 +36,39 @@ Fixed — verdicts that weren't:
   most-copied path produced the weakest evidence. `migrate` now pins the
   mapped rewrite files by default (reusing `loop.rewrite_files`).
 
+Fixed — gates and evidence that quietly covered less than they claimed:
+
+- **The quality gate passed vacuously when it couldn't find the rewrite
+  on disk.** Replay resolves the rewrite by *import*; the gate resolved it
+  by *filesystem path*. A rewrite that imports fine but doesn't sit where
+  the mapping implies (installed package, `src/` layout, namespace
+  package) was scanned as an empty file list and reported a clean gate
+  over code it never read. The loop now refuses to report a clean gate it
+  couldn't actually run.
+- **`verify-attestation` ignored trace files *added* after signing.** It
+  checked that attested files were unchanged, but never that unattested
+  ones hadn't appeared beside them — so new, uncovered behaviors read as
+  part of the signed set. Extras are now reported.
+- **`attest --code` ran the quality gate with default settings**, ignoring
+  the project's `[quality]` config, so a signed bundle could report errors
+  the team's own gate was configured to skip. It now uses the same config
+  every other call site does.
+- **The MCP server never restored its working directory.** A
+  `nodrift_replay` call with `workdir` relocated the long-lived server
+  permanently, so later calls — including ones passing no `workdir` —
+  silently resolved against the previous call's project.
+- **`migrate --driver` destroyed Windows paths.** POSIX splitting treats
+  backslash as an escape, so `--driver "python scripts\run.py"` ran the
+  wrong command. Split is now platform-correct (and still strips the
+  quotes around a quoted executable, which non-POSIX splitting leaves on).
+- `nodrift-fix-prompt.md` — which embeds recorded inputs/outputs *and* the
+  original module source — was left in the working directory after every
+  agent run. It's now removed once the agent finishes, and `nodrift init`
+  adds it (and `*.key`) to `.gitignore`.
+- `nodrift llm-check` exited `1` (the "divergences found" code) on an
+  unreachable endpoint or bad key. It now exits `2`, so CI can tell "we
+  never ran" apart from "the rewrite is wrong."
+
 Fixed — silent config failure:
 
 - `[[scrub.regex]]` (standard TOML array-of-tables) silently misparsed
@@ -44,7 +77,7 @@ Fixed — silent config failure:
   reject unsupported syntax. It now raises, pointing at the flat
   `regex = ["pattern", ...]` form that does work on the fallback parser.
 
-236 tests (up from 221). All 11 validation cohorts still replay clean and
+247 tests (up from 221). All 11 validation cohorts still replay clean and
 the seeded-bug rewrite in `examples/legacy_pricing` is still caught.
 
 ## 0.13.0 — 2026-07-26 (comparison-core audit: three false matches fixed)

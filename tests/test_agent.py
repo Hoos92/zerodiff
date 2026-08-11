@@ -172,9 +172,12 @@ def test_llm_check_command(stub, ws):
     script.replies.append({"text": "OK"})
     assert cli.main(["llm-check", "--llm", "openai-compatible:m",
                      "--llm-base-url", root + "/v1"]) == 0
-    # dead endpoint -> actionable failure
+    # dead endpoint -> actionable failure. EXIT_ERROR (2), not
+    # EXIT_DIVERGED (1): an unreachable endpoint is a usage error, and CI
+    # must be able to tell it apart from "the rewrite diverged"
     assert cli.main(["llm-check", "--llm", "openai-compatible:m",
-                     "--llm-base-url", "http://127.0.0.1:9/v1"]) == 1
+                     "--llm-base-url", "http://127.0.0.1:9/v1"]) == \
+        cli.EXIT_ERROR
 
 
 def test_builtin_agent_full_loop_with_quality_gate(stub, ws):

@@ -67,7 +67,8 @@ def _git_commit() -> Optional[str]:
 
 def build_attestation(trace_dir: str, report_path: str, key_file: str,
                       code_paths: Optional[List[str]] = None,
-                      allow_diverged: bool = False
+                      allow_diverged: bool = False,
+                      cfg: Optional[Any] = None
                       ) -> Dict[str, Any]:
     """A tamper-evident evidence bundle: digests of every input that
     produced the verification verdict, HMAC-signed with the team key.
@@ -115,10 +116,17 @@ def build_attestation(trace_dir: str, report_path: str, key_file: str,
         body["code"] = {path: _sha256_file(path)
                         for path in sorted(code_paths)}
         # signed evidence should speak to security too: run the quality
-        # gate over the attested code and embed the outcome
+        # gate over the attested code and embed the outcome -- under the
+        # project's own [quality] config, so the attested outcome cannot
+        # contradict the gate the loop actually enforced
         from . import __version__, quality
+        from .config import load_config
 
-        findings = quality.check_files(sorted(code_paths))
+        if cfg is None:
+            cfg = load_config(None)
+        findings = quality.check_files(sorted(code_paths),
+                                       budgets=cfg.quality_budgets(),
+                                       disabled=cfg.quality_disabled())
         errors = quality.error_count(findings)
         body["quality"] = {
             "errors": errors,
@@ -166,6 +174,17 @@ def verify_attestation(attestation_path: str, key_file: str,
             elif _sha256_file(path) != recorded_digest:
                 problems.append("trace file changed since attestation: %s"
                                 % name)
+        # tamper-evidence has to cover ADDED evidence too: unattested
+        # behaviors appearing next to attested ones would otherwise read
+        # as covered by the signature
+        try:
+            on_disk = {name for name in os.listdir(trace_dir)
+                       if name.endswith(".jsonl")}
+        except OSError:
+            on_disk = set()
+        for name in sorted(on_disk - set(body["traces"])):
+            problems.append("trace file added since attestation (not "
+                            "covered by this signature): %s" % name)
     for path, recorded_digest in body.get("code", {}).items():
         if not os.path.exists(path):
             problems.append("attested code file missing: %s" % path)
