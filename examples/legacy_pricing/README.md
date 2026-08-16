@@ -15,19 +15,19 @@ Run the loop (from this directory):
 ```bash
 # 1. record what the legacy code actually does
 #    (~90 calls -> 48 unique behaviors, across 3 boundaries)
-nodrift record -o traces -- python driver.py
+zerodiff record -o traces -- python driver.py
 
 # 2. replay against the good rewrite -> everything matches, exit code 0
-nodrift replay -t traces
+zerodiff replay -t traces
 
 # 3. replay against the buggy rewrite -> all five bugs caught, exit code 1
-nodrift replay -t traces --map pricing:pricing_buggy
+zerodiff replay -t traces --map pricing:pricing_buggy
 
-# 4. read the human report, or feed nodrift-report.json to a coding agent
-nodrift report --format md
+# 4. read the human report, or feed zerodiff-report.json to a coding agent
+zerodiff report --format md
 ```
 
 Note what step 3 catches that a typical test suite doesn't: the buggy rewrite
-*runs fine* — it just behaves differently. NoDrift flags every divergence
+*runs fine* — it just behaves differently. ZeroDiff flags every divergence
 with the exact input that exposes it and a hint aimed at the agent that will
 fix it.

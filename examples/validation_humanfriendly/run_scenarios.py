@@ -1,14 +1,14 @@
 """Exercises humanfriendly (github.com/xolox/python-humanfriendly) —
 size/timespan parsing and formatting, dense with unit-ambiguity rules.
 
-    nodrift record -o traces -- python run_scenarios.py
+    zerodiff record -o traces -- python run_scenarios.py
 """
 
-import nodrift
+import zerodiff
 
 for fn in ("parse_size", "format_size", "parse_timespan",
            "format_timespan"):
-    nodrift.wrap("humanfriendly", fn)
+    zerodiff.wrap("humanfriendly", fn)
 
 import humanfriendly  # noqa: E402
 

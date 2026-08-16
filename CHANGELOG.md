@@ -1,10 +1,41 @@
 # Changelog
 
 
+## 0.15.0 — 2026-08-15 (rename: NoDrift -> ZeroDiff)
+
+The product is now **ZeroDiff** (package `zerodiff`, CLI `zerodiff`,
+config `zerodiff.toml`, env vars `ZERODIFF_*`, reports
+`zerodiff-report.*`, attestations `zerodiff-attestation.json`, history in
+`.zerodiff/`).
+
+Why: while this project was still private, an unrelated developer
+published a package named `nodrift` to PyPI on 2026-08-07 — independently,
+and for a strikingly similar purpose ("prove a refactor changed nothing by
+running it"). Two people reached for the same obvious phrase for the same
+idea. The PyPI name was theirs first, `pip install nodrift` would have
+installed a different tool, and a shared name with a same-category project
+helps nobody. **ZeroDiff** says the same thing — a green run means zero
+diff between the original's recorded behavior and the rewrite's — and it
+is ours alone.
+
+- no behavior changes: the rename is mechanical, and the full suite,
+  the dogfooded quality gate, every validation cohort, and the
+  seeded-bug counter-check all pass identically before and after
+- the agent file-block protocol sentinel is now
+  `<<<ZERODIFF-FILE: name.py>>>` / `<<<ZERODIFF-END>>>`
+- inline quality suppressions are now `# zerodiff-quality: ignore[rule]`
+- if you used NoDrift: rename the package in imports, rename
+  `nodrift.toml` to `zerodiff.toml`, and re-point `NODRIFT_*` env vars.
+  **Recorded traces need no migration** — the trace format is unchanged
+  and the tool name in `meta` is written but never read back. Verified
+  concretely: the `examples/validation_roman` traces still carry
+  `"retrace": "0.7.0"` from two renames ago and replay 10,083/10,083
+  clean under this release.
+
 ## 0.14.0 — 2026-08-10 (trust audit: "pass" verdicts that weren't)
 
 A second, independent audit pass over the modules v0.13.0 didn't cover
-found two ways NoDrift could report a clean pass without having verified
+found two ways ZeroDiff could report a clean pass without having verified
 anything, plus a silent config failure. Same defect class as v0.13.0's
 false matches, one layer up: not "compared wrong" but "claimed a verdict
 it hadn't earned."
@@ -15,22 +46,22 @@ Fixed — verdicts that weren't:
   `--traces` path, a CI artifact that failed to restore, or a `record`
   step that silently captured nothing all produced "matched 0, diverged
   0" and **exit 0** — a clean pass backed by no evidence at all. This
-  reached every gating surface: `nodrift replay`, `nodrift guard check`,
-  and `nodrift.testing.verify_traces()` (the one-line CI gate the README
+  reached every gating surface: `zerodiff replay`, `zerodiff guard check`,
+  and `zerodiff.testing.verify_traces()` (the one-line CI gate the README
   recommends). Reports now carry a distinct `no_data` verdict; the two
   CLI commands exit `2` with an explanatory message, and `verify_traces()`
-  raises the new `NoBehaviorsReplayed`. `nodrift record` already guarded
+  raises the new `NoBehaviorsReplayed`. `zerodiff record` already guarded
   the equivalent case on the recording side — replay simply never did.
 - **Attestations could sign, and later "verify" as clean, a failed
-  verification.** `nodrift attest` stored the report's verdict but never
+  verification.** `zerodiff attest` stored the report's verdict but never
   checked it, and `verify-attestation` validated only the signature and
   digests — so an attestation of a diverged run verified green and exited
   0. `attest` now refuses a non-matched verdict unless you explicitly pass
   `--allow-diverged` (for deliberately attesting a failure), and
   `verify-attestation` reports a non-matched verdict as a problem.
-- **`nodrift migrate --attest` didn't pin the rewrite it just verified.**
+- **`zerodiff migrate --attest` didn't pin the rewrite it just verified.**
   It never passed the rewrite files to the attestation, so — unlike
-  `nodrift attest --code` — a backdoor appended to the verified rewrite
+  `zerodiff attest --code` — a backdoor appended to the verified rewrite
   afterwards was invisible to `verify-attestation`. Since the README's
   flagship `migrate` example ends in `--attest` with no `--code`, the
   most-copied path produced the weakest evidence. `migrate` now pins the
@@ -54,18 +85,18 @@ Fixed — gates and evidence that quietly covered less than they claimed:
   the team's own gate was configured to skip. It now uses the same config
   every other call site does.
 - **The MCP server never restored its working directory.** A
-  `nodrift_replay` call with `workdir` relocated the long-lived server
+  `zerodiff_replay` call with `workdir` relocated the long-lived server
   permanently, so later calls — including ones passing no `workdir` —
   silently resolved against the previous call's project.
 - **`migrate --driver` destroyed Windows paths.** POSIX splitting treats
   backslash as an escape, so `--driver "python scripts\run.py"` ran the
   wrong command. Split is now platform-correct (and still strips the
   quotes around a quoted executable, which non-POSIX splitting leaves on).
-- `nodrift-fix-prompt.md` — which embeds recorded inputs/outputs *and* the
+- `zerodiff-fix-prompt.md` — which embeds recorded inputs/outputs *and* the
   original module source — was left in the working directory after every
-  agent run. It's now removed once the agent finishes, and `nodrift init`
+  agent run. It's now removed once the agent finishes, and `zerodiff init`
   adds it (and `*.key`) to `.gitignore`.
-- `nodrift llm-check` exited `1` (the "divergences found" code) on an
+- `zerodiff llm-check` exited `1` (the "divergences found" code) on an
   unreachable endpoint or bad key. It now exits `2`, so CI can tell "we
   never ran" apart from "the rewrite is wrong."
 
@@ -81,18 +112,18 @@ Polish:
 
 - `replay --jobs 0` (or negative) silently ran serial, *non-isolated*
   replay despite `--jobs` advertising isolated workers; it's now rejected.
-- A report that parses as JSON but isn't a NoDrift report produced a raw
+- A report that parses as JSON but isn't a ZeroDiff report produced a raw
   `KeyError` traceback instead of a readable error.
 - `load_unique_traces` deduplicated id-less traces against each other
   (`None == None`), silently collapsing hand-edited or malformed traces
   into one behavior.
-- `nodrift demo` created a new temp directory on every run and never
+- `zerodiff demo` created a new temp directory on every run and never
   removed it. It now reuses one stable location — the demo intentionally
   leaves its files for inspection, so deleting them would defeat the point.
-- `nodrift record`'s summary reported the trace *directory's* total
+- `zerodiff record`'s summary reported the trace *directory's* total
   boundary count as though this run had touched them all; when appending
   to existing traces it now says so.
-- MCP server docstring said "two tools" (it exposes three — `nodrift_quality`
+- MCP server docstring said "two tools" (it exposes three — `zerodiff_quality`
   since 0.8.0); dead imports removed; a dead conditional in the JUnit
   failure count simplified.
 
@@ -101,7 +132,7 @@ the seeded-bug rewrite in `examples/legacy_pricing` is still caught.
 
 ## 0.13.0 — 2026-07-26 (comparison-core audit: three false matches fixed)
 
-An audit of the comparison core found cases where NoDrift reported
+An audit of the comparison core found cases where ZeroDiff reported
 **matched** for values that behave differently. For a verification harness
 those are the worst possible defect, so they lead this release. Every fix
 below is pinned by a regression test in `tests/test_v013.py` (221 tests,
@@ -157,7 +188,7 @@ Fixed — gate and agent robustness:
 
 Added:
 
-- `nodrift.unwrap()` and `nodrift.unwrap_class()` undo `wrap()` /
+- `zerodiff.unwrap()` and `zerodiff.unwrap_class()` undo `wrap()` /
   `record_class()`; instrumentation previously lasted for the life of the
   process and leaked between tests sharing an interpreter.
 - Boundary resolution is cached per replay run (10k-behavior replays no
@@ -166,15 +197,17 @@ Added:
 
 ## 0.12.0 — 2026-07-06 (rename: Retrace -> NoDrift)
 
-- the product is now **NoDrift** (package `nodrift`, CLI `nodrift`,
-  config `nodrift.toml`, env vars `NODRIFT_*`, reports `nodrift-report.*`)
-  after an availability sweep found the old name collided with a funded
-  dental-AI company at retrace.ai and an adjacent agent-replay product
-  at retraceai.tech
+- the product was renamed **Retrace -> NoDrift** (package `nodrift`, CLI
+  `nodrift`, config `nodrift.toml`, env vars `NODRIFT_*`) after an
+  availability sweep found the old name collided with a funded dental-AI
+  company at retrace.ai and an adjacent agent-replay product at
+  retraceai.tech
 - no behavior changes; full suite green before and after
+- (NoDrift was itself superseded by **ZeroDiff** in 0.15.0 — see above)
+
 ## 0.11.0 — 2026-07-05 (guard, coverage confidence, class ergonomics)
 
-- `nodrift guard baseline` / `nodrift guard check`: the dependency-
+- `zerodiff guard baseline` / `zerodiff guard check`: the dependency-
   upgrade safety net -- record before upgrading, replay after; identity
   mapping on purpose (the upgraded package lives behind the same names)
 - coverage confidence in every report: boundaries, distinct behaviors,
@@ -182,15 +215,15 @@ Added:
   error paths
 - class ergonomics: dataclass and Enum values now RECONSTRUCT at replay
   when their class is importable (methods taking/returning dataclasses
-  become fully replayable); `nodrift.record_class()` instruments a
+  become fully replayable); `zerodiff.record_class()` instruments a
   class's public/static/class methods; `wrap()` accepts "Class.method"
-- `nodrift insights --json`; examples/ index README
+- `zerodiff insights --json`; examples/ index README
 
 ## 0.10.2 — 2026-07-05 (cold-clone audit)
 
-- packaging version is now single-sourced from `nodrift.__version__`
+- packaging version is now single-sourced from `zerodiff.__version__`
   (pip metadata had been stuck at 0.1.0 since the first release)
-- README documents `nodrift insights`; changelog backfilled for 0.10.1
+- README documents `zerodiff insights`; changelog backfilled for 0.10.1
 - audit verified from a fresh GitHub clone: 168 tests, demo, pricing
   example (good + buggy + insights), stdnum committed rewrites 269/269,
   attest/verify/history, MCP tools/list — all green with zero setup
@@ -207,13 +240,13 @@ Added:
 
 ## 0.10.0 — 2026-07-05 (self-improvement loops + live cohort)
 
-- `nodrift insights`: mines your report and history locally into
+- `zerodiff insights`: mines your report and history locally into
   concrete next actions (adapters for weak comparisons, float_tolerance
   for numeric noise, hot boundaries, attest/CI habits after a green
   streak, regression pointer to the last green commit)
 - inline quality suppressions with an audit trail:
-  `# nodrift-quality: ignore[rule]` on the flagged line
-- CI now dogfoods the quality gate on NoDrift's own source
+  `# zerodiff-quality: ignore[rule]` on the flagged line
+- CI now dogfoods the quality gate on ZeroDiff's own source
 - resolver diagnostics: a rewrite module that exists but fails to import
   (relative imports, missing deps) now surfaces the actual import error
   in the missing_boundary hint; agent prompt + scaffold demand
@@ -245,12 +278,12 @@ Added:
   LLM directly (anthropic / openai / openai-compatible with
   `--llm-base-url` for Ollama, OpenRouter, vLLM, Gemini-compat); zero
   dependencies (stdlib urllib), keys from standard env vars, `[agent]`
-  config in nodrift.toml
+  config in zerodiff.toml
 - the built-in agent is least-privilege by design: no shell, no tools,
   output protocol is full-file sentinel blocks, writes restricted to the
   allowlisted rewrite files (path traversal rejected), and everything it
   writes still passes the quality gate and replay
-- `nodrift llm-check`: validate key/model/endpoint with one tiny
+- `zerodiff llm-check`: validate key/model/endpoint with one tiny
   round-trip before burning a real run
 - 161 tests (stub LLM server, no network in CI)
 
@@ -263,19 +296,19 @@ Added:
   were encoded *after* the call (a mutating original recorded its mutated
   inputs as the inputs). Opt out with `[record] mutations = false`
 - **stateful code support**: `meta.seq` global chronology on every trace;
-  `nodrift replay --in-order` replays every call (no dedup) in recorded
+  `zerodiff replay --in-order` replays every call (no dedup) in recorded
   order
 - **agent-loop economics**: stall detection (identical problems two
   iterations running → stop early), `--agent-timeout` (default 1800s),
   and prompts now name the rewrite files and the attempt number
 - **parallel replay**: `--jobs N` shards across isolated workers
   (verified identical counts to serial on 10k behaviors)
-- **coherence**: MCP server gained `nodrift_quality`; attestations with
+- **coherence**: MCP server gained `zerodiff_quality`; attestations with
   `--code` now embed the quality-gate outcome in the signed body and
-  accept `NODRIFT_ATTEST_KEY`; reports flag Python-version drift between
+  accept `ZERODIFF_ATTEST_KEY`; reports flag Python-version drift between
   record and replay
 - robustness: markdown reports cap at 100 divergences; unreadable files
-  become gate findings; `nodrift init` template includes `[quality]`
+  become gate findings; `zerodiff init` template includes `[quality]`
 
 ## 0.7.0 — 2026-07-04
 
@@ -284,41 +317,41 @@ Added:
   secrets, unsafe deserialization, disabled TLS verification, insecure
   tempfiles; warns on weak hashes, exception-swallowing, mutable
   defaults, and length/complexity/nesting budget violations
-- enforced in `nodrift loop` / `nodrift migrate` by default (findings are
+- enforced in `zerodiff loop` / `zerodiff migrate` by default (findings are
   appended to the agent's fix prompt; the loop won't go green while
   blocking findings remain; `--no-quality` opts out); standalone
-  `nodrift quality FILE...`; budgets configurable via `[quality]` in
-  nodrift.toml
+  `zerodiff quality FILE...`; budgets configurable via `[quality]` in
+  zerodiff.toml
 - secure-coding rules embedded in every agent fix prompt
 
 ## 0.6.0 — 2026-07-04
 
-- `nodrift replay` warns loudly when no `[map]` entry applied to any
+- `zerodiff replay` warns loudly when no `[map]` entry applied to any
   boundary (you were replaying the original against itself)
-- attestations can pin rewrite source files (`nodrift attest --code FILE`)
+- attestations can pin rewrite source files (`zerodiff attest --code FILE`)
   and record the git commit; `verify-attestation` checks code digests too
-- `nodrift history` entries record the git commit
+- `zerodiff history` entries record the git commit
 - new complex validation: python-stdnum (luhn/isbn/iban) through the full
-  `nodrift migrate` pipeline end to end
+  `zerodiff migrate` pipeline end to end
 - repo governance: CHANGELOG, SECURITY.md, CONTRIBUTING.md, CI workflow
 
 ## 0.5.0 — 2026-07-04
 
-- `nodrift migrate`: the whole verified migration in one command — record
+- `zerodiff migrate`: the whole verified migration in one command — record
   → scaffold rewrite stubs from recorded boundaries → drive any agent CLI
   through the replay-fix loop → optional signed attestation
 
 ## 0.4.0 — 2026-07-04
 
-- free tier: `nodrift init`, `nodrift demo`, `nodrift.testing.verify_traces()`
-  pytest one-liner, `nodrift replay --junit-out`
-- Enterprise (COMMERCIAL.md): `nodrift attest` / `verify-attestation`
-  (HMAC-signed tamper-evident evidence), `nodrift history`
+- free tier: `zerodiff init`, `zerodiff demo`, `zerodiff.testing.verify_traces()`
+  pytest one-liner, `zerodiff replay --junit-out`
+- Enterprise (COMMERCIAL.md): `zerodiff attest` / `verify-attestation`
+  (HMAC-signed tamper-evident evidence), `zerodiff history`
 
 ## 0.3.0 — 2026-07-03
 
-- `nodrift loop`: unattended replay→agent→replay loop for any agent CLI
-- `nodrift mcp`: zero-dependency MCP server (Claude Code, Codex, Copilot,
+- `zerodiff loop`: unattended replay→agent→replay loop for any agent CLI
+- `zerodiff mcp`: zero-dependency MCP server (Claude Code, Codex, Copilot,
   Cursor)
 - GitHub Action and Claude Code hook integrations
 

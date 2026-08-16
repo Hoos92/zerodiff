@@ -7,10 +7,10 @@ import textwrap
 
 import pytest
 
-import nodrift
-from nodrift import differ
-from nodrift.config import Config
-from nodrift.replayer import replay_all
+import zerodiff
+from zerodiff import differ
+from zerodiff.config import Config
+from zerodiff.replayer import replay_all
 
 
 @pytest.fixture()
@@ -33,8 +33,8 @@ def _write(dir_path, name, source):
 
 
 def _record(traces_dir, module_name, calls):
-    nodrift.wrap(module_name, "f")
-    nodrift.start_recording(str(traces_dir))
+    zerodiff.wrap(module_name, "f")
+    zerodiff.start_recording(str(traces_dir))
     try:
         module = importlib.import_module(module_name)
         for args, expect_raise in calls:
@@ -44,7 +44,7 @@ def _record(traces_dir, module_name, calls):
             else:
                 module.f(*args)
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
 
 def test_isolated_replay_matches_in_process(iso_dir):

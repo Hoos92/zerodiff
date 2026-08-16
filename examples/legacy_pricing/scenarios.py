@@ -1,8 +1,8 @@
-"""Exercises the legacy pricing module. Contains no nodrift code at all.
+"""Exercises the legacy pricing module. Contains no zerodiff code at all.
 
 Use with auto-instrumentation (zero edits to any file):
 
-    nodrift record --include pricing -o traces -- python scenarios.py
+    zerodiff record --include pricing -o traces -- python scenarios.py
 """
 
 import pricing

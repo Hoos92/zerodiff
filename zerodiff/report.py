@@ -1,4 +1,4 @@
-"""Render replay results as nodrift-report.json (agents) and .md (humans).
+"""Render replay results as zerodiff-report.json (agents) and .md (humans).
 
 Product invariant: reports state "matched N of M recorded behaviors" and
 never claim unqualified equivalence. Weak matches and skipped traces are
@@ -9,8 +9,8 @@ import datetime
 import json
 from typing import Any, Dict
 
-REPORT_JSON = "nodrift-report.json"
-REPORT_MD = "nodrift-report.md"
+REPORT_JSON = "zerodiff-report.json"
+REPORT_MD = "zerodiff-report.md"
 
 
 def build_report(result_dict: Dict[str, Any], trace_dir: str,
@@ -28,7 +28,7 @@ def build_report(result_dict: Dict[str, Any], trace_dir: str,
         if summary.get("replayed") else 0.0,
     }
     return {
-        "nodrift_report": 1,
+        "zerodiff_report": 1,
         "generated_at": datetime.datetime.now(
             datetime.timezone.utc).isoformat(),
         "trace_dir": trace_dir,
@@ -67,7 +67,7 @@ def write_reports(report: Dict[str, Any], json_path: str = REPORT_JSON,
 def render_markdown(report: Dict[str, Any]) -> str:
     s = report["summary"]
     lines = []
-    lines.append("# NoDrift report")
+    lines.append("# ZeroDiff report")
     lines.append("")
     lines.append("**Result: {} of {} replayed behaviors matched.**".format(
         s["matched"], s["replayed"]))
@@ -133,7 +133,7 @@ def render_markdown(report: Dict[str, Any]) -> str:
         overflow = len(report["divergences"]) - len(shown)
         if overflow > 0:
             lines.append("_Showing the first {} divergences; {} more in "
-                         "nodrift-report.json._".format(len(shown),
+                         "zerodiff-report.json._".format(len(shown),
                                                         overflow))
             lines.append("")
         by_boundary = {}
@@ -197,11 +197,11 @@ def render_junit(report: Dict[str, Any]) -> str:
                     % (quoteattr("%d recorded behaviors diverged"
                                  % b["diverged"]),
                        escape("\n".join(lines))))
-        cases.append('<testcase classname="nodrift" name=%s>%s</testcase>'
+        cases.append('<testcase classname="zerodiff" name=%s>%s</testcase>'
                      % (quoteattr(target), body))
 
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<testsuite name="nodrift" tests="%d" failures="%d">'
+            '<testsuite name="zerodiff" tests="%d" failures="%d">'
             "%s</testsuite>\n"
             # by_boundary only ever gains keys with a non-empty list, so
             # its length IS the failure count

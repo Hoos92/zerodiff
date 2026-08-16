@@ -1,7 +1,7 @@
-"""`nodrift insights` — the self-improvement loop.
+"""`zerodiff insights` — the self-improvement loop.
 
-Mines your own verification artifacts (nodrift-report.json and
-.nodrift/history.jsonl) and turns them into concrete next actions:
+Mines your own verification artifacts (zerodiff-report.json and
+.zerodiff/history.jsonl) and turns them into concrete next actions:
 config to add, adapters to register, habits to adopt. Everything is
 computed locally; nothing leaves the machine.
 """
@@ -21,9 +21,9 @@ def generate(report: Dict[str, Any],
 
     if summary.get("weak_matches"):
         suggestions.append(
-            "%d comparisons were fingerprint-only (values NoDrift could "
+            "%d comparisons were fingerprint-only (values ZeroDiff could "
             "not fully serialize). Register adapters for those types "
-            "(nodrift.register_adapter) to turn weak comparisons into "
+            "(zerodiff.register_adapter) to turn weak comparisons into "
             "full verification." % summary["weak_matches"])
     if summary.get("skipped_unreplayable"):
         suggestions.append(
@@ -91,15 +91,15 @@ def generate(report: Dict[str, Any],
         if len(recent) >= 3 and all(v == "matched" for v in verdicts):
             suggestions.append(
                 "Last %d runs all matched -- lock it in: add "
-                "nodrift.testing.verify_traces() to your test suite, gate "
+                "zerodiff.testing.verify_traces() to your test suite, gate "
                 "PRs with the GitHub Action, and sign the state with "
-                "`nodrift attest`." % len(recent))
+                "`zerodiff attest`." % len(recent))
         elif len(recent) >= 2 and verdicts[-1] != "matched" and \
                 verdicts[-2] == "matched":
             suggestions.append(
                 "This run regressed a previously matching state -- "
                 "compare against the last green run in "
-                ".nodrift/history.jsonl (git commits are recorded there).")
+                ".zerodiff/history.jsonl (git commits are recorded there).")
 
     if not suggestions:
         suggestions.append(
@@ -116,8 +116,8 @@ def cmd_insights(report_path: str, history_dir: str = ".",
         with open(report_path, "r", encoding="utf-8") as f:
             report = json.load(f)
     except FileNotFoundError:
-        print("nodrift insights: no report found at %s -- run "
-              "`nodrift replay` first" % report_path)
+        print("zerodiff insights: no report found at %s -- run "
+              "`zerodiff replay` first" % report_path)
         return 2
     history = []
     history_path = os.path.join(history_dir, HISTORY_DIR, HISTORY_FILE)
@@ -130,7 +130,7 @@ def cmd_insights(report_path: str, history_dir: str = ".",
         print(json.dumps({"verdict": report.get("verdict"),
                           "suggestions": suggestions}, indent=2))
         return 0
-    print("nodrift insights (%s: %d/%d matched):"
+    print("zerodiff insights (%s: %d/%d matched):"
           % (report.get("verdict"), report["summary"]["matched"],
              report["summary"]["replayed"]))
     for index, suggestion in enumerate(suggestions, 1):

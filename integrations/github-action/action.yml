@@ -1,4 +1,4 @@
-name: "NoDrift behavioral gate"
+name: "ZeroDiff behavioral gate"
 description: >-
   Replay recorded behavioral traces against the code in this PR and fail
   the check if any recorded behavior diverged. Works on code written by
@@ -28,10 +28,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install nodrift
+    - name: Install zerodiff
       shell: bash
-      # once published on PyPI this becomes simply: pip install nodrift
-      run: pip install "nodrift @ git+https://github.com/Hoos92/nodrift"
+      # once published on PyPI this becomes simply: pip install zerodiff
+      run: pip install "zerodiff @ git+https://github.com/Hoos92/zerodiff"
     - name: Replay recorded behaviors
       shell: bash
       working-directory: ${{ inputs.workdir }}
@@ -42,13 +42,13 @@ runs:
         for m in "${MAPS[@]}"; do
           [ -n "$m" ] && ARGS+=(--map "$m")
         done
-        nodrift replay "${ARGS[@]}"
+        zerodiff replay "${ARGS[@]}"
     - name: Upload report
       if: always()
       shell: bash
       working-directory: ${{ inputs.workdir }}
       run: |
-        if [ -f nodrift-report.md ]; then
-          echo "## NoDrift behavioral report" >> "$GITHUB_STEP_SUMMARY"
-          cat nodrift-report.md >> "$GITHUB_STEP_SUMMARY"
+        if [ -f zerodiff-report.md ]; then
+          echo "## ZeroDiff behavioral report" >> "$GITHUB_STEP_SUMMARY"
+          cat zerodiff-report.md >> "$GITHUB_STEP_SUMMARY"
         fi

@@ -1,4 +1,4 @@
-"""`nodrift init` and `nodrift demo` — the 60-second on-ramp."""
+"""`zerodiff init` and `zerodiff demo` — the 60-second on-ramp."""
 
 import os
 import shutil
@@ -8,8 +8,8 @@ import tempfile
 import textwrap
 
 CONFIG_TEMPLATE = """\
-# nodrift.toml -- behavioral verification config
-# Docs: https://github.com/Hoos92/nodrift
+# zerodiff.toml -- behavioral verification config
+# Docs: https://github.com/Hoos92/zerodiff
 
 [map]
 # Where recorded boundaries should be replayed. old prefix = new prefix:
@@ -31,34 +31,34 @@ CONFIG_TEMPLATE = """\
 # disable = ["weak-hash"]
 """
 
-GITIGNORE_LINES = ["traces/", "nodrift-report.json", "nodrift-report.md",
-                   ".nodrift/", "nodrift-fix-prompt.md", "*.key"]
+GITIGNORE_LINES = ["traces/", "zerodiff-report.json", "zerodiff-report.md",
+                   ".zerodiff/", "zerodiff-fix-prompt.md", "*.key"]
 
 NEXT_STEPS = """\
-nodrift: initialized.
+zerodiff: initialized.
 
 Next steps:
   1. record what your code really does (no source edits needed):
-       nodrift record --include yourmodule -o traces -- python your_driver.py
-  2. add the old->new mapping to nodrift.toml under [map]
+       zerodiff record --include yourmodule -o traces -- python your_driver.py
+  2. add the old->new mapping to zerodiff.toml under [map]
   3. verify the rewrite:
-       nodrift replay -t traces
+       zerodiff replay -t traces
   4. gate it forever -- in your test suite:
-       from nodrift.testing import verify_traces
+       from zerodiff.testing import verify_traces
        def test_behavior(): verify_traces()
 
-Try `nodrift demo` for a 30-second guided example.
+Try `zerodiff demo` for a 30-second guided example.
 """
 
 
 def cmd_init(directory: str = ".") -> int:
-    config_path = os.path.join(directory, "nodrift.toml")
+    config_path = os.path.join(directory, "zerodiff.toml")
     if os.path.exists(config_path):
-        print("nodrift: nodrift.toml already exists; leaving it untouched")
+        print("zerodiff: zerodiff.toml already exists; leaving it untouched")
     else:
         with open(config_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(CONFIG_TEMPLATE)
-        print("nodrift: wrote nodrift.toml")
+        print("zerodiff: wrote zerodiff.toml")
 
     gitignore_path = os.path.join(directory, ".gitignore")
     existing = ""
@@ -70,16 +70,16 @@ def cmd_init(directory: str = ".") -> int:
         with open(gitignore_path, "a", encoding="utf-8", newline="\n") as f:
             if existing and not existing.endswith("\n"):
                 f.write("\n")
-            f.write("# nodrift: traces can contain real runtime data\n")
+            f.write("# zerodiff: traces can contain real runtime data\n")
             f.write("\n".join(missing) + "\n")
-        print("nodrift: updated .gitignore (%s)" % ", ".join(missing))
+        print("zerodiff: updated .gitignore (%s)" % ", ".join(missing))
 
     print()
     print(NEXT_STEPS)
     return 0
 
 
-# --- nodrift demo -----------------------------------------------------------
+# --- zerodiff demo -----------------------------------------------------------
 
 DEMO_LEGACY = """\
 def apply_discount(order_total, code):
@@ -122,7 +122,7 @@ DEMO_TOML = """\
 
 
 def cmd_demo() -> int:
-    print("nodrift demo: a legacy function, a modernized rewrite, and the")
+    print("zerodiff demo: a legacy function, a modernized rewrite, and the")
     print("question that matters: does the rewrite behave the same?")
     print()
     # a stable path, not mkdtemp: the demo deliberately leaves its files
@@ -130,20 +130,20 @@ def cmd_demo() -> int:
     # random directory per run would pile up in temp forever. Reset it
     # each run so the demo always tells the same story instead of
     # appending to the previous run's traces.
-    demo_dir = os.path.join(tempfile.gettempdir(), "nodrift-demo")
+    demo_dir = os.path.join(tempfile.gettempdir(), "zerodiff-demo")
     shutil.rmtree(demo_dir, ignore_errors=True)
     os.makedirs(demo_dir, exist_ok=True)
     files = {"demo_legacy.py": DEMO_LEGACY,
              "demo_rewrite.py": DEMO_REWRITE_BUGGY,
              "demo_driver.py": DEMO_DRIVER,
-             "nodrift.toml": DEMO_TOML}
+             "zerodiff.toml": DEMO_TOML}
     for name, content in files.items():
         with open(os.path.join(demo_dir, name), "w", encoding="utf-8",
                   newline="\n") as f:
             f.write(textwrap.dedent(content))
 
     print("step 1 -- record the legacy code (zero source edits):")
-    print("  $ nodrift record --include demo_legacy -o traces "
+    print("  $ zerodiff record --include demo_legacy -o traces "
           "-- python demo_driver.py")
     code = _run(demo_dir, "record", "--include", "demo_legacy",
                 "-o", "traces", "--", sys.executable, "demo_driver.py")
@@ -151,7 +151,7 @@ def cmd_demo() -> int:
         return code
     print()
     print("step 2 -- replay against the modernized rewrite:")
-    print("  $ nodrift replay -t traces")
+    print("  $ zerodiff replay -t traces")
     _run(demo_dir, "replay", "-t", "traces")
     print()
     print("The rewrite LOOKED fine -- it 'improved' an error message, and")
@@ -159,11 +159,11 @@ def cmd_demo() -> int:
     print("production. That's what recorded behavior catches.")
     print()
     print("demo files and full reports: %s" % demo_dir)
-    print("start on your own code with: nodrift init")
+    print("start on your own code with: zerodiff init")
     return 0
 
 
 def _run(cwd: str, *args: str) -> int:
-    proc = subprocess.run([sys.executable, "-m", "nodrift.cli"] + list(args),
+    proc = subprocess.run([sys.executable, "-m", "zerodiff.cli"] + list(args),
                           cwd=cwd)
     return proc.returncode

@@ -1,6 +1,6 @@
 """v0.13.0 correctness fixes found by auditing the comparison core.
 
-The first three cases were *false matches*: NoDrift reported "matched" for
+The first three cases were *false matches*: ZeroDiff reported "matched" for
 values that behave differently. For a verification harness those are the
 worst possible defect, so each one is pinned here.
 """
@@ -13,12 +13,12 @@ import textwrap
 
 import pytest
 
-import nodrift
-from nodrift import differ, replayer, scrubbers, store
-from nodrift.agent import AgentError, BuiltinAgent
-from nodrift.config import Config
-from nodrift.quality import check_source
-from nodrift.serializer import RESERVED_KEYS, canonical_json, decode, encode
+import zerodiff
+from zerodiff import differ, replayer, scrubbers, store
+from zerodiff.agent import AgentError, BuiltinAgent
+from zerodiff.config import Config
+from zerodiff.quality import check_source
+from zerodiff.serializer import RESERVED_KEYS, canonical_json, decode, encode
 
 
 def _diff(a, b, tol=0.0):
@@ -152,33 +152,33 @@ class TestInstrumentationLifecycle:
                     return x
         """), encoding="utf-8")
         importlib.invalidate_caches()
-        assert nodrift.record_class("v13cls", "C") == 2
+        assert zerodiff.record_class("v13cls", "C") == 2
         # a second call must not wrap the wrapper: that recorded two traces
         # per call and inflated the behavior count
-        assert nodrift.record_class("v13cls", "C") == 0
+        assert zerodiff.record_class("v13cls", "C") == 0
 
-        nodrift.start_recording(str(ws / "traces"))
+        zerodiff.start_recording(str(ws / "traces"))
         try:
             module = importlib.import_module("v13cls")
             module.C.s(1)
             module.C.c(1)
         finally:
-            nodrift.stop_recording()
+            zerodiff.stop_recording()
         assert len(list(store.iter_traces(str(ws / "traces")))) == 2
 
     def test_unwrap_restores_the_original(self, ws):
         (ws / "v13fn.py").write_text("def f(x):\n    return x\n",
                                      encoding="utf-8")
         importlib.invalidate_caches()
-        nodrift.wrap("v13fn", "f")
-        assert nodrift.unwrap("v13fn", "f") is True
-        assert nodrift.unwrap("v13fn", "f") is False  # nothing left to undo
+        zerodiff.wrap("v13fn", "f")
+        assert zerodiff.unwrap("v13fn", "f") is True
+        assert zerodiff.unwrap("v13fn", "f") is False  # nothing left to undo
 
-        nodrift.start_recording(str(ws / "traces"))
+        zerodiff.start_recording(str(ws / "traces"))
         try:
             importlib.import_module("v13fn").f(1)
         finally:
-            nodrift.stop_recording()
+            zerodiff.stop_recording()
         assert not (ws / "traces").exists()  # nothing was recorded
 
     def test_unwrap_class_restores_every_descriptor(self, ws):
@@ -192,9 +192,9 @@ class TestInstrumentationLifecycle:
                     return x
         """), encoding="utf-8")
         importlib.invalidate_caches()
-        assert nodrift.record_class("v13cls2", "C") == 2
-        assert nodrift.unwrap_class("v13cls2", "C") == 2
-        assert nodrift.unwrap_class("v13cls2", "C") == 0
+        assert zerodiff.record_class("v13cls2", "C") == 2
+        assert zerodiff.unwrap_class("v13cls2", "C") == 2
+        assert zerodiff.unwrap_class("v13cls2", "C") == 0
 
 
 class TestReplayAccounting:

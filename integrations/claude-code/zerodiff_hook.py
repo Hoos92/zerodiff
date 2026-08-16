@@ -5,8 +5,8 @@ After every Edit/Write, replays the recorded traces; if any recorded
 behavior diverged, exits with code 2 so Claude Code blocks the change and
 feeds the divergence digest straight back to the agent as the reason.
 
-Requires a `nodrift-hook.toml`-adjacent setup: run from the project root,
-with a `traces/` directory and a `nodrift.toml` holding the [map].
+Requires a `zerodiff-hook.toml`-adjacent setup: run from the project root,
+with a `traces/` directory and a `zerodiff.toml` holding the [map].
 """
 
 import json
@@ -23,20 +23,20 @@ def main() -> int:
         pass
 
     proc = subprocess.run(
-        [sys.executable, "-m", "nodrift.cli", "replay", "-t", "traces",
+        [sys.executable, "-m", "zerodiff.cli", "replay", "-t", "traces",
          "--isolate"],
         capture_output=True, text=True)
     if proc.returncode == 0:
         return 0
     if proc.returncode == 2:
         # harness/setup error: report but don't block the edit on it
-        print("nodrift hook: harness error:\n" + proc.stderr,
+        print("zerodiff hook: harness error:\n" + proc.stderr,
               file=sys.stderr)
         return 0
 
     # divergence: exit 2 blocks the change and Claude sees this digest
     try:
-        with open("nodrift-report.json", encoding="utf-8") as f:
+        with open("zerodiff-report.json", encoding="utf-8") as f:
             report = json.load(f)
         lines = ["This edit breaks recorded behavior "
                  "(%d divergences). Fix these before proceeding:"
@@ -48,8 +48,8 @@ def main() -> int:
                             d["hint"]))
         print("\n".join(lines), file=sys.stderr)
     except Exception:
-        print("nodrift: recorded behaviors diverged (see "
-              "nodrift-report.md)", file=sys.stderr)
+        print("zerodiff: recorded behaviors diverged (see "
+              "zerodiff-report.md)", file=sys.stderr)
     return 2
 
 

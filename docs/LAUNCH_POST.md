@@ -70,13 +70,13 @@ does — so that's the thing to record.
 
 ## The tool
 
-NoDrift is an open-source (MIT, zero-dependency) harness with a three-verb
+ZeroDiff is an open-source (MIT, zero-dependency) harness with a three-verb
 workflow:
 
 ```
-nodrift record --include yourmodule -o traces -- python drive_it.py
-nodrift replay -t traces --map "yourmodule:yourmodule_v2"
-nodrift report
+zerodiff record --include yourmodule -o traces -- python drive_it.py
+zerodiff replay -t traces --map "yourmodule:yourmodule_v2"
+zerodiff report
 ```
 
 Record real input→output behavior (exceptions included — they're behavior)
@@ -93,14 +93,14 @@ written for a coding agent:
 Feed that back to any agent and the loop converges fast: all eleven
 libraries above reached **100% of recorded behaviors matching in at most
 three passes**, using nothing but the report hints. There's a built-in loop
-(`nodrift loop --agent "claude -p ..."`), an MCP server so agents can call
+(`zerodiff loop --agent "claude -p ..."`), an MCP server so agents can call
 verification natively, a GitHub Action, and a Claude Code hook that blocks
 any edit which breaks recorded behavior.
 
 ## And it isn't just my hand-written rewrites
 
 To rule out "you wrote bad rewrites on purpose," I handed the same job to a
-real LLM with no human in the loop — `nodrift migrate --llm openai:...`, a
+real LLM with no human in the loop — `zerodiff migrate --llm openai:...`, a
 live funded key, the model writing every line, the loop driving itself off
 the report hints:
 
@@ -118,7 +118,7 @@ the line. The capability frontier gets measured, not guessed.
 
 ## What it doesn't claim
 
-NoDrift proves equivalence over *recorded* behaviors — never all possible
+ZeroDiff proves equivalence over *recorded* behaviors — never all possible
 behaviors. Reports say "matched 1,145 of 1,145 recorded behaviors" and list
 coverage per boundary; the word "identical" doesn't appear. Values it can't
 fully serialize are compared by fingerprint and flagged as weak, never
@@ -133,5 +133,5 @@ review it. Generation is solved; trust is not. The original's recorded
 behavior is the one ground truth that requires no one to understand the
 code — which matters, because for most legacy code, nobody does.
 
-Repo: https://github.com/Hoos92/nodrift — the experiments are in
+Repo: https://github.com/Hoos92/zerodiff — the experiments are in
 `examples/`, each reproducible in under a minute.

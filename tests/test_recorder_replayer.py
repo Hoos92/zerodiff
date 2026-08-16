@@ -4,10 +4,10 @@ import textwrap
 
 import pytest
 
-import nodrift
-from nodrift import store
-from nodrift.config import Config
-from nodrift.replayer import map_target, replay_all, resolve_callable
+import zerodiff
+from zerodiff import store
+from zerodiff.config import Config
+from zerodiff.replayer import map_target, replay_all, resolve_callable
 
 
 @pytest.fixture()
@@ -41,8 +41,8 @@ def test_record_and_replay_round_trip(modules_dir, tmp_path):
             return x + x
     """)
     traces = str(tmp_path / "traces")
-    nodrift.wrap("legmod_a", "double")
-    nodrift.start_recording(traces)
+    zerodiff.wrap("legmod_a", "double")
+    zerodiff.start_recording(traces)
     try:
         legmod = importlib.import_module("legmod_a")
         assert legmod.double(3) == 6
@@ -50,7 +50,7 @@ def test_record_and_replay_round_trip(modules_dir, tmp_path):
         with pytest.raises(ValueError):
             legmod.double(-2)
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
     result = replay_all(traces, {"legmod_a": "newmod_a"}, Config())
     assert result.traces_total == 3
@@ -71,15 +71,15 @@ def test_replay_detects_divergence_and_missing_boundary(modules_dir, tmp_path):
             return a + b + 1
     """)
     traces = str(tmp_path / "traces")
-    nodrift.wrap("legmod_b", "add")
-    nodrift.wrap("legmod_b", "sub")
-    nodrift.start_recording(traces)
+    zerodiff.wrap("legmod_b", "add")
+    zerodiff.wrap("legmod_b", "sub")
+    zerodiff.start_recording(traces)
     try:
         legmod = importlib.import_module("legmod_b")
         legmod.add(1, 2)
         legmod.sub(5, 3)
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
     result = replay_all(traces, {"legmod_b": "newmod_b"}, Config())
     kinds = sorted(d.kind for d in result.divergences)
@@ -92,15 +92,15 @@ def test_identical_calls_deduplicate(modules_dir, tmp_path):
             return x
     """)
     traces = str(tmp_path / "traces")
-    nodrift.wrap("legmod_c", "f")
-    nodrift.start_recording(traces)
+    zerodiff.wrap("legmod_c", "f")
+    zerodiff.start_recording(traces)
     try:
         legmod = importlib.import_module("legmod_c")
         for _ in range(5):
             legmod.f(7)
         legmod.f(8)
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
     assert sum(1 for _ in store.iter_traces(traces)) == 6
     assert len(store.load_unique_traces(traces)) == 2
@@ -111,7 +111,7 @@ def test_recording_inactive_means_passthrough(modules_dir):
         def f(x):
             return x * 10
     """)
-    wrapped = nodrift.wrap("legmod_d", "f")
+    wrapped = zerodiff.wrap("legmod_d", "f")
     assert wrapped(4) == 40  # no trace dir set; must just work
 
 
@@ -125,14 +125,14 @@ def test_kwargs_are_recorded_and_replayed(modules_dir, tmp_path):
             return "hi {}{}".format(name, punct)
     """)
     traces = str(tmp_path / "traces")
-    nodrift.wrap("legmod_e", "greet")
-    nodrift.start_recording(traces)
+    zerodiff.wrap("legmod_e", "greet")
+    zerodiff.start_recording(traces)
     try:
         legmod = importlib.import_module("legmod_e")
         legmod.greet("ada", punct="?")
         legmod.greet("bob")
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
     result = replay_all(traces, {"legmod_e": "newmod_e"}, Config())
     assert result.matched == 2 and not result.divergences
@@ -145,14 +145,14 @@ def test_unreplayable_opaque_input_is_skipped_not_hidden(modules_dir,
             return str(type(obj).__name__)
     """)
     traces = str(tmp_path / "traces")
-    nodrift.wrap("legmod_f", "describe")
-    nodrift.start_recording(traces)
+    zerodiff.wrap("legmod_f", "describe")
+    zerodiff.start_recording(traces)
     try:
         legmod = importlib.import_module("legmod_f")
         legmod.describe(object())  # unserializable input
         legmod.describe("plain")   # replayable input
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
     result = replay_all(traces, {"legmod_f": "legmod_f"}, Config())
     assert len(result.skipped) == 1

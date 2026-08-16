@@ -103,7 +103,7 @@ def diff_output(expected: Dict[str, Any], actual: Dict[str, Any],
     """Compare recorded output vs replayed output (both already scrubbed).
 
     Returns (divergences, weak_match_count). weak_match_count counts opaque
-    nodes whose digests matched -- comparisons NoDrift could not fully verify.
+    nodes whose digests matched -- comparisons ZeroDiff could not fully verify.
     """
     ctx = _Ctx(boundary, trace_id, input_preview, float_tolerance)
 
@@ -229,7 +229,7 @@ def _diff_tree(exp: Any, act: Any, path: str, ctx: _Ctx) -> None:
                 ctx.add(KIND_WEAK, path, e.get("repr"), a.get("repr"),
                         "at {p}, values of type {t} could not be fully "
                         "serialized and their fingerprints differ for input "
-                        "{inp} -- inspect {b} manually; NoDrift can see the "
+                        "{inp} -- inspect {b} manually; ZeroDiff can see the "
                         "change but not explain it.".format(
                             p=path, t=e.get("type"), inp=ctx.input_preview,
                             b=ctx.boundary))
@@ -271,7 +271,7 @@ def _diff_tree(exp: Any, act: Any, path: str, ctx: _Ctx) -> None:
                     "at {p}, expected {e!r} but got {a!r} for input {inp} "
                     "(difference {d:g}) -- check rounding/precision in {b}; "
                     "if this difference is acceptable noise, set "
-                    "float_tolerance in nodrift.toml.".format(
+                    "float_tolerance in zerodiff.toml.".format(
                         p=path, e=exp, a=act, d=abs(exp - act),
                         inp=ctx.input_preview, b=ctx.boundary))
         return

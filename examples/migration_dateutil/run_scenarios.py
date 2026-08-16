@@ -1,8 +1,8 @@
 """Exercises dateutil.easter across its whole documented domain.
 
-No nodrift code anywhere — recording happens via auto-instrumentation:
+No zerodiff code anywhere — recording happens via auto-instrumentation:
 
-    nodrift record --include dateutil.easter -o traces -- python run_scenarios.py
+    zerodiff record --include dateutil.easter -o traces -- python run_scenarios.py
 """
 
 from dateutil import easter

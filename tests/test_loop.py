@@ -6,9 +6,9 @@ import textwrap
 
 import pytest
 
-import nodrift
-from nodrift.config import Config
-from nodrift.loop import build_prompt, run_loop
+import zerodiff
+from zerodiff.config import Config
+from zerodiff.loop import build_prompt, run_loop
 
 LEGACY = """
 def add_fee(amount):
@@ -61,8 +61,8 @@ def _record_legacy(tmp_path):
     (tmp_path / "loopleg_a.py").write_text(textwrap.dedent(LEGACY),
                                            encoding="utf-8")
     importlib.invalidate_caches()
-    nodrift.wrap("loopleg_a", "add_fee")
-    nodrift.start_recording(str(tmp_path / "traces"))
+    zerodiff.wrap("loopleg_a", "add_fee")
+    zerodiff.start_recording(str(tmp_path / "traces"))
     try:
         module = importlib.import_module("loopleg_a")
         module.add_fee(100)
@@ -72,7 +72,7 @@ def _record_legacy(tmp_path):
         except ValueError:
             pass
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
 
 
 def test_loop_converges_with_stdin_agent(loop_dir):

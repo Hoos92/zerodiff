@@ -14,16 +14,16 @@ import textwrap
 
 import pytest
 
-import nodrift
-from nodrift import cli, enterprise
-from nodrift import report as report_mod
-from nodrift.config import Config, _parse_toml_subset, load_config
-from nodrift.loop import PROMPT_FILE, run_agent
-from nodrift.migrate import split_driver
-from nodrift.replayer import replay_all
-from nodrift.report import _verdict
-from nodrift.scaffold import GITIGNORE_LINES
-from nodrift.testing import BehaviorMismatch, NoBehaviorsReplayed, \
+import zerodiff
+from zerodiff import cli, enterprise
+from zerodiff import report as report_mod
+from zerodiff.config import Config, _parse_toml_subset, load_config
+from zerodiff.loop import PROMPT_FILE, run_agent
+from zerodiff.migrate import split_driver
+from zerodiff.replayer import replay_all
+from zerodiff.report import _verdict
+from zerodiff.scaffold import GITIGNORE_LINES
+from zerodiff.testing import BehaviorMismatch, NoBehaviorsReplayed, \
     verify_traces
 
 
@@ -39,12 +39,12 @@ def project(tmp_path, monkeypatch):
     (tmp_path / "v14new_bad.py").write_text(
         "def f(x):\n    return x + 2\n", encoding="utf-8")
     importlib.invalidate_caches()
-    nodrift.wrap("v14leg_a", "f")
-    nodrift.start_recording(str(tmp_path / "traces"))
+    zerodiff.wrap("v14leg_a", "f")
+    zerodiff.start_recording(str(tmp_path / "traces"))
     try:
         importlib.import_module("v14leg_a").f(1)
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
     yield tmp_path
     for name in list(sys.modules):
         if name.startswith("v14"):
@@ -108,7 +108,7 @@ class TestAttestationTrust:
         result = replay_all("traces", mapping, Config())
         report = report_mod.build_report(result.to_dict(), "traces", mapping)
         report_mod.write_reports(report)
-        return "nodrift-report.json"
+        return "zerodiff-report.json"
 
     def _diverged_report_path(self, project):
         return self._write_report({"v14leg_a": "v14new_bad"})
@@ -168,14 +168,14 @@ class TestAttestationTrust:
         code = cli.main(["attest", "-t", "traces", "--key-file", "team.key",
                          "--allow-diverged"])
         assert code == 0
-        with open("nodrift-attestation.json", encoding="utf-8") as f:
+        with open("zerodiff-attestation.json", encoding="utf-8") as f:
             body = json.load(f)["body"]
         assert body["verdict"] == "diverged"
 
 
 class TestMcpDoesNotLeakCwd:
     def test_workdir_is_restored_after_the_call(self, project, tmp_path):
-        from nodrift import mcp_server
+        from zerodiff import mcp_server
 
         sub = tmp_path / "sub"
         sub.mkdir()
@@ -187,7 +187,7 @@ class TestMcpDoesNotLeakCwd:
         assert os.getcwd() == before
 
     def test_cwd_restored_even_when_the_call_raises(self, project, tmp_path):
-        from nodrift import mcp_server
+        from zerodiff import mcp_server
 
         before = os.getcwd()
         with pytest.raises(Exception):
@@ -203,7 +203,7 @@ class TestQualityGateCannotPassVacuously:
         path. A rewrite that is importable but not where the mapping
         implies used to be scanned as an empty file list -- a green gate
         over code that was never read."""
-        from nodrift.loop import run_loop
+        from zerodiff.loop import run_loop
 
         elsewhere = tmp_path / "elsewhere"
         elsewhere.mkdir()
@@ -215,7 +215,7 @@ class TestQualityGateCannotPassVacuously:
         assert "could not locate source" in capsys.readouterr().err
 
     def test_locatable_rewrite_still_passes_cleanly(self, project):
-        from nodrift.loop import run_loop
+        from zerodiff.loop import run_loop
 
         remaining = run_loop(str(project / "traces"),
                              {"v14leg_a": "v14new_good"}, Config(),
@@ -230,7 +230,7 @@ class TestAttestationCoversAddedTraces:
         key = project / "team.key"
         key.write_bytes(b"attestation-signing-key-000001")
         attestation = enterprise.build_attestation(
-            "traces", "nodrift-report.json", str(key))
+            "traces", "zerodiff-report.json", str(key))
         (project / "att.json").write_text(json.dumps(attestation),
                                           encoding="utf-8")
         # unattested behaviors dropped in next to attested ones must not
@@ -253,17 +253,17 @@ class TestAttestQualityUsesProjectConfig:
         key.write_bytes(b"attestation-signing-key-000001")
 
         default = enterprise.build_attestation(
-            "traces", "nodrift-report.json", str(key),
+            "traces", "zerodiff-report.json", str(key),
             code_paths=["v14new_good.py"])
         assert default["body"]["quality"]["errors"] >= 1
 
         # the same file, under a project config that disables the rule the
         # loop's own gate would have skipped too
-        (project / "nodrift.toml").write_text(
+        (project / "zerodiff.toml").write_text(
             '[quality]\ndisable = ["hardcoded-secret"]\n', encoding="utf-8")
         scoped = enterprise.build_attestation(
-            "traces", "nodrift-report.json", str(key),
-            code_paths=["v14new_good.py"], cfg=load_config("nodrift.toml"))
+            "traces", "zerodiff-report.json", str(key),
+            code_paths=["v14new_good.py"], cfg=load_config("zerodiff.toml"))
         assert scoped["body"]["quality"]["errors"] == 0
 
 
@@ -315,7 +315,7 @@ class TestPolish:
         assert "malformed report" in capsys.readouterr().err
 
     def test_idless_traces_are_not_collapsed(self, tmp_path):
-        from nodrift import store
+        from zerodiff import store
 
         trace_dir = tmp_path / "traces"
         trace_dir.mkdir()

@@ -2,8 +2,8 @@
 
 Vendor-neutral by design. The agent is any shell command:
 
-    nodrift loop -t traces --agent "claude -p --permission-mode acceptEdits"
-    nodrift loop -t traces --agent "codex exec --full-auto {prompt_file}"
+    zerodiff loop -t traces --agent "claude -p --permission-mode acceptEdits"
+    zerodiff loop -t traces --agent "codex exec --full-auto {prompt_file}"
 
 If the command contains ``{prompt_file}``, the path of a file holding the
 fix prompt is substituted; otherwise the prompt is piped to the agent's
@@ -24,7 +24,7 @@ MAX_PROMPT_DIVERGENCES = 40
 
 PROMPT_HEADER = """\
 You are fixing a rewrite so it behaves exactly like the original code it
-replaces. A behavioral verification tool (NoDrift) replayed recorded
+replaces. A behavioral verification tool (ZeroDiff) replayed recorded
 real-world calls of the original against the rewrite and found divergences.
 
 Rules:
@@ -32,7 +32,7 @@ Rules:
 - Behavior must match the original exactly, including exception types,
   exception messages, and returned value types -- even where the original's
   behavior looks wrong. Do not "improve" behavior.
-- Never modify the traces directory, nodrift.toml, or the report files.
+- Never modify the traces directory, zerodiff.toml, or the report files.
 - Do not re-run the verification yourself; the loop does that.
 
 Secure & quality coding rules (statically enforced -- the loop will not
@@ -154,7 +154,7 @@ def rewrite_files(mappings: Dict[str, str], workdir: str):
 
 
 AGENT_TIMED_OUT = -9999
-PROMPT_FILE = "nodrift-fix-prompt.md"
+PROMPT_FILE = "zerodiff-fix-prompt.md"
 
 
 class ShellAgent:
@@ -178,10 +178,10 @@ def run_agent(agent_cmd: str, prompt: str, workdir: str,
         # the user's --agent value IS a shell command by contract
         if "{prompt_file}" in agent_cmd:
             cmd = agent_cmd.replace("{prompt_file}", prompt_file)
-            proc = subprocess.run(cmd, shell=True, cwd=workdir,  # nodrift-quality: ignore[shell-injection]
+            proc = subprocess.run(cmd, shell=True, cwd=workdir,  # zerodiff-quality: ignore[shell-injection]
                                   timeout=agent_timeout)
         else:
-            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,  # nodrift-quality: ignore[shell-injection]
+            proc = subprocess.run(agent_cmd, shell=True, cwd=workdir,  # zerodiff-quality: ignore[shell-injection]
                                   input=prompt.encode("utf-8"),
                                   timeout=agent_timeout)
     except subprocess.TimeoutExpired:
@@ -246,7 +246,7 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
                 # where the mapping implies (installed package, namespace
                 # package, src/ layout) would otherwise be scanned as an
                 # empty file list and pass the gate vacuously
-                print("nodrift loop: quality gate: could not locate source "
+                print("zerodiff loop: quality gate: could not locate source "
                       "for rewrite module(s) %s under %r -- refusing to "
                       "report a clean gate on code that was never scanned. "
                       "Run the loop from the directory containing the "
@@ -260,19 +260,19 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
         blocking = quality_mod.error_count(findings) + unscannable
         remaining = divergences + blocking
 
-        print("nodrift loop: iteration %d: %d of %d matched, "
+        print("zerodiff loop: iteration %d: %d of %d matched, "
               "%d divergences, %d blocking quality findings"
               % (iteration, report["summary"]["matched"],
                  report["summary"]["replayed"], divergences, blocking))
         if remaining == 0:
             if findings:  # non-blocking warnings still worth surfacing
-                print("nodrift loop: quality warnings (non-blocking):")
+                print("zerodiff loop: quality warnings (non-blocking):")
                 print(quality_mod.render_text(findings))
             return 0
 
         fingerprint = _fingerprint(report, blocking)
         if fingerprint in recent_fingerprints[-3:]:
-            print("nodrift loop: agent is stalled or cycling (this exact "
+            print("zerodiff loop: agent is stalled or cycling (this exact "
                   "problem set was already seen); stopping early after "
                   "%d iterations to avoid burning agent spend"
                   % iteration)
@@ -281,16 +281,16 @@ def run_loop(trace_dir: str, mappings: Dict[str, str], cfg: Config,
 
         if iteration == max_iters:
             break
-        print("nodrift loop: invoking agent...")
+        print("zerodiff loop: invoking agent...")
         code = runner.run(
             build_prompt(report, findings, files=files,
                          iteration=iteration, max_iters=max_iters,
                          originals=originals),
             files, workdir)
         if code == AGENT_TIMED_OUT:
-            print("nodrift loop: agent timed out after %ds; stopping"
+            print("zerodiff loop: agent timed out after %ds; stopping"
                   % agent_timeout)
             break
         if code != 0:
-            print("nodrift loop: warning: agent exited with code %d" % code)
+            print("zerodiff loop: warning: agent exited with code %d" % code)
     return remaining

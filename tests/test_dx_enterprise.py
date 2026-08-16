@@ -9,10 +9,10 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-import nodrift
-from nodrift import enterprise, report as report_mod
-from nodrift.scaffold import cmd_init
-from nodrift.testing import BehaviorMismatch, verify_traces
+import zerodiff
+from zerodiff import enterprise, report as report_mod
+from zerodiff.scaffold import cmd_init
+from zerodiff.testing import BehaviorMismatch, verify_traces
 
 
 @pytest.fixture()
@@ -33,14 +33,14 @@ def project(tmp_path, monkeypatch):
             return sum(prices)
     """), encoding="utf-8")
     importlib.invalidate_caches()
-    nodrift.wrap("dxleg_a", "total")
-    nodrift.start_recording(str(tmp_path / "traces"))
+    zerodiff.wrap("dxleg_a", "total")
+    zerodiff.start_recording(str(tmp_path / "traces"))
     try:
         module = importlib.import_module("dxleg_a")
         module.total([1.111, 2.222])
         module.total([])
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
     yield tmp_path
     for name in list(sys.modules):
         if name.startswith(("dxleg_", "dxnew_")):
@@ -51,22 +51,22 @@ class TestInit:
     def test_creates_config_and_gitignore(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         assert cmd_init() == 0
-        config = (tmp_path / "nodrift.toml").read_text(encoding="utf-8")
+        config = (tmp_path / "zerodiff.toml").read_text(encoding="utf-8")
         assert "[map]" in config and "redact_fields" in config
         gitignore = (tmp_path / ".gitignore").read_text(encoding="utf-8")
         assert "traces/" in gitignore
 
     def test_never_overwrites_existing_config(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        (tmp_path / "nodrift.toml").write_text('[map]\n"a" = "b"\n',
+        (tmp_path / "zerodiff.toml").write_text('[map]\n"a" = "b"\n',
                                                encoding="utf-8")
         cmd_init()
-        assert '"a" = "b"' in (tmp_path / "nodrift.toml").read_text(
+        assert '"a" = "b"' in (tmp_path / "zerodiff.toml").read_text(
             encoding="utf-8")
 
 
 def test_demo_runs_end_to_end():
-    proc = subprocess.run([sys.executable, "-m", "nodrift.cli", "demo"],
+    proc = subprocess.run([sys.executable, "-m", "zerodiff.cli", "demo"],
                           capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stderr + proc.stdout
     assert "recorded" in proc.stdout
@@ -108,7 +108,7 @@ class TestAttestation:
     def test_sign_and_verify(self, project):
         key = self._setup(project)
         attestation = enterprise.build_attestation(
-            "traces", "nodrift-report.json", key)
+            "traces", "zerodiff-report.json", key)
         (project / "att.json").write_text(json.dumps(attestation),
                                           encoding="utf-8")
         problems = enterprise.verify_attestation(str(project / "att.json"),
@@ -120,7 +120,7 @@ class TestAttestation:
     def test_tampered_body_fails_signature(self, project):
         key = self._setup(project)
         attestation = enterprise.build_attestation(
-            "traces", "nodrift-report.json", key)
+            "traces", "zerodiff-report.json", key)
         attestation["body"]["summary"]["matched"] += 1  # cook the books
         (project / "att.json").write_text(json.dumps(attestation),
                                           encoding="utf-8")
@@ -131,7 +131,7 @@ class TestAttestation:
     def test_tampered_trace_file_detected(self, project):
         key = self._setup(project)
         attestation = enterprise.build_attestation(
-            "traces", "nodrift-report.json", key)
+            "traces", "zerodiff-report.json", key)
         (project / "att.json").write_text(json.dumps(attestation),
                                           encoding="utf-8")
         trace_file = next((project / "traces").glob("*.jsonl"))
@@ -144,7 +144,7 @@ class TestAttestation:
     def test_wrong_key_fails(self, project):
         key = self._setup(project)
         attestation = enterprise.build_attestation(
-            "traces", "nodrift-report.json", key)
+            "traces", "zerodiff-report.json", key)
         (project / "att.json").write_text(json.dumps(attestation),
                                           encoding="utf-8")
         other = project / "other.key"

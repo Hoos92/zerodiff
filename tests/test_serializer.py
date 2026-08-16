@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from nodrift import serializer
+from zerodiff import serializer
 
 
 class TestRoundTrip:

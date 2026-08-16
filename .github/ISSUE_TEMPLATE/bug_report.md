@@ -7,7 +7,7 @@ about: Something diverged from documented behavior
 
 **Repro** (commands + minimal module if possible)
 
-**Environment**: OS, Python version, `nodrift --version`
+**Environment**: OS, Python version, `zerodiff --version`
 
 If verification produced a report, paste the relevant divergence entries
-from `nodrift-report.json` (redact any sensitive recorded data first).
+from `zerodiff-report.json` (redact any sensitive recorded data first).

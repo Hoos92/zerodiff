@@ -1,8 +1,8 @@
 """Exercises `inflection` (github.com/jpvanhal/inflection), a direct port
 of Ruby on Rails' inflector — 2012-era regex rule tables.
 
-Zero nodrift code — record with:
-    nodrift record --include inflection -o traces -- python run_scenarios.py
+Zero zerodiff code — record with:
+    zerodiff record --include inflection -o traces -- python run_scenarios.py
 """
 
 import inflection

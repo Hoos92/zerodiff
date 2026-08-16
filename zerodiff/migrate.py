@@ -1,6 +1,6 @@
-"""`nodrift migrate` — the whole verified migration in one command.
+"""`zerodiff migrate` — the whole verified migration in one command.
 
-    nodrift migrate \
+    zerodiff migrate \
         --include billing.pricing \
         --driver "python run_scenarios.py" \
         --map billing.pricing:pricing_v2 \
@@ -12,7 +12,7 @@ rewrite module with stubs for every recorded boundary, (3) drive the agent
 of your choice through the replay-fix loop until every recorded behavior
 matches, (4) optionally sign a tamper-evident attestation of the result.
 
-NoDrift stays the judge throughout: the agent (any CLI you name) writes
+ZeroDiff stays the judge throughout: the agent (any CLI you name) writes
 the code; verification is deterministic and contains no model.
 """
 
@@ -47,7 +47,7 @@ def split_driver(driver: str) -> List[str]:
 
 
 STUB_HEADER = '''\
-"""Rewrite target scaffolded by `nodrift migrate`.
+"""Rewrite target scaffolded by `zerodiff migrate`.
 
 Implement each function below so its behavior matches the recorded
 behavior of the original exactly -- including exception types, messages,
@@ -131,11 +131,11 @@ def cmd_migrate(args) -> int:
     try:
         runner = make_runner(args, cfg)
     except ValueError as exc:
-        print("nodrift migrate: error: %s" % exc, file=sys.stderr)
+        print("zerodiff migrate: error: %s" % exc, file=sys.stderr)
         return EXIT_ERROR
     if not mappings:
-        print("nodrift migrate: error: no mapping given -- add --map "
-              "OLD:NEW or a [map] section in nodrift.toml",
+        print("zerodiff migrate: error: no mapping given -- add --map "
+              "OLD:NEW or a [map] section in zerodiff.toml",
               file=sys.stderr)
         return EXIT_ERROR
 
@@ -143,35 +143,35 @@ def cmd_migrate(args) -> int:
     have_traces = os.path.isdir(args.traces) and any(
         name.endswith(".jsonl") for name in os.listdir(args.traces))
     if have_traces and args.skip_record:
-        print("nodrift migrate: [1/4] using existing traces in %s"
+        print("zerodiff migrate: [1/4] using existing traces in %s"
               % args.traces)
     else:
         if not args.driver:
-            print("nodrift migrate: error: no --driver given and no "
+            print("zerodiff migrate: error: no --driver given and no "
                   "existing traces to reuse (or pass --skip-record with "
                   "recorded traces)", file=sys.stderr)
             return EXIT_ERROR
-        print("nodrift migrate: [1/4] recording real behavior...")
-        record_cmd = [sys.executable, "-m", "nodrift.cli", "record",
+        print("zerodiff migrate: [1/4] recording real behavior...")
+        record_cmd = [sys.executable, "-m", "zerodiff.cli", "record",
                       "-o", args.traces]
         for pattern in args.include:
             record_cmd += ["--include", pattern]
         record_cmd += ["--"] + split_driver(args.driver)
         if subprocess.run(record_cmd).returncode != 0:
-            print("nodrift migrate: recording failed", file=sys.stderr)
+            print("zerodiff migrate: recording failed", file=sys.stderr)
             return EXIT_ERROR
 
     # step 2: scaffold rewrite stubs
     created = scaffold_rewrites(args.traces, mappings, workdir)
     if created:
-        print("nodrift migrate: [2/4] scaffolded rewrite stubs: %s"
+        print("zerodiff migrate: [2/4] scaffolded rewrite stubs: %s"
               % ", ".join(created))
     else:
-        print("nodrift migrate: [2/4] rewrite modules already exist; "
+        print("zerodiff migrate: [2/4] rewrite modules already exist; "
               "the loop will converge them")
 
     # step 3: the agent loop (always isolated; edits re-import fresh)
-    print("nodrift migrate: [3/4] driving the agent until every recorded "
+    print("zerodiff migrate: [3/4] driving the agent until every recorded "
           "behavior matches...")
     remaining = run_loop(args.traces, mappings, cfg,
                          max_iters=args.max_iters, timeout=args.timeout,
@@ -182,15 +182,15 @@ def cmd_migrate(args) -> int:
                                                1800.0),
                          runner=runner)
     if remaining > 0:
-        print("nodrift migrate: FAILED -- %d divergences remain after %d "
-              "iterations (see nodrift-report.md)"
+        print("zerodiff migrate: FAILED -- %d divergences remain after %d "
+              "iterations (see zerodiff-report.md)"
               % (remaining, args.max_iters))
         return EXIT_DIVERGED
 
     # step 4: attestation (optional)
     if args.attest:
         if not args.key_file:
-            print("nodrift migrate: error: --attest requires --key-file",
+            print("zerodiff migrate: error: --attest requires --key-file",
                   file=sys.stderr)
             return EXIT_ERROR
         from .enterprise import ATTESTATION_FILE, build_attestation
@@ -205,15 +205,15 @@ def cmd_migrate(args) -> int:
                   newline="\n") as f:
             json_mod.dump(attestation, f, indent=2)
             f.write("\n")
-        print("nodrift migrate: [4/4] signed attestation -> %s"
+        print("zerodiff migrate: [4/4] signed attestation -> %s"
               % ATTESTATION_FILE)
     else:
-        print("nodrift migrate: [4/4] done (no attestation requested; "
+        print("zerodiff migrate: [4/4] done (no attestation requested; "
               "add --attest --key-file KEY for signed evidence)")
 
     print()
-    print("nodrift migrate: SUCCESS -- every recorded behavior matches.")
-    print("  evidence: nodrift-report.md / nodrift-report.json")
-    print("  keep it verified: add nodrift.testing.verify_traces() to "
+    print("zerodiff migrate: SUCCESS -- every recorded behavior matches.")
+    print("  evidence: zerodiff-report.md / zerodiff-report.json")
+    print("  keep it verified: add zerodiff.testing.verify_traces() to "
           "your test suite")
     return EXIT_MATCHED

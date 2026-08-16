@@ -1,7 +1,7 @@
 """Exercises the `roman` package (github.com/zopefoundation/roman).
 
-Zero nodrift code — record with:
-    nodrift record --include roman -o traces -- python run_scenarios.py
+Zero zerodiff code — record with:
+    zerodiff record --include roman -o traces -- python run_scenarios.py
 """
 
 import roman

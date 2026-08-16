@@ -2,8 +2,8 @@
 # Never commit them by default.
 traces/
 **/traces/
-nodrift-report.json
-nodrift-report.md
+zerodiff-report.json
+zerodiff-report.md
 
 # Python
 __pycache__/
@@ -16,9 +16,19 @@ dist/
 venv/
 
 # run artifacts and keys must never be committed
-.nodrift/
-**/.nodrift/
+.zerodiff/
+**/.zerodiff/
+zerodiff-attestation.json
+zerodiff-junit.xml
+zerodiff-fix-prompt.md
+*.key
+
+# legacy artifact names, from before the NoDrift -> ZeroDiff rename.
+# Anyone upgrading has these lying around; they must not get swept up.
+nodrift-report.json
+nodrift-report.md
 nodrift-attestation.json
 nodrift-junit.xml
 nodrift-fix-prompt.md
-*.key
+.nodrift/
+**/.nodrift/

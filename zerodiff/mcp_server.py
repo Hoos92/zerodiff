@@ -1,16 +1,16 @@
-"""MCP server: ``nodrift mcp`` (or ``python -m nodrift.mcp_server``).
+"""MCP server: ``zerodiff mcp`` (or ``python -m zerodiff.mcp_server``).
 
 Speaks Model Context Protocol (JSON-RPC 2.0, newline-delimited, stdio) with
 zero dependencies, exposing verification to any MCP-capable coding agent —
 Claude Code, Codex, Copilot, Cursor. Three tools:
 
-- nodrift_replay: replay recorded traces against the rewrite, get the
+- zerodiff_replay: replay recorded traces against the rewrite, get the
   summary and every divergence with hints
-- nodrift_report: read an existing nodrift-report.json
-- nodrift_quality: run the security/quality gate over given files, so an
+- zerodiff_report: read an existing zerodiff-report.json
+- zerodiff_quality: run the security/quality gate over given files, so an
   agent can check its own work before replaying
 
-Register with e.g.:  claude mcp add nodrift -- nodrift mcp
+Register with e.g.:  claude mcp add zerodiff -- zerodiff mcp
 """
 
 import json
@@ -26,7 +26,7 @@ MAX_TOOL_DIVERGENCES = 40
 
 TOOLS = [
     {
-        "name": "nodrift_replay",
+        "name": "zerodiff_replay",
         "description": (
             "Replay recorded behavioral traces against rewritten code and "
             "report every divergence. Returns matched/diverged counts and "
@@ -45,7 +45,7 @@ TOOLS = [
                                    '{"billing": "billing_v2"}'},
                 "config": {
                     "type": "string",
-                    "description": "path to nodrift.toml (optional)"},
+                    "description": "path to zerodiff.toml (optional)"},
                 "isolate": {
                     "type": "boolean",
                     "description": "replay in a worker subprocess (default "
@@ -60,21 +60,21 @@ TOOLS = [
         },
     },
     {
-        "name": "nodrift_report",
-        "description": "Read an existing nodrift-report.json and return "
+        "name": "zerodiff_report",
+        "description": "Read an existing zerodiff-report.json and return "
                        "its summary and divergences.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "report_path": {
                     "type": "string",
-                    "description": "path to nodrift-report.json "
-                                   "(default: ./nodrift-report.json)"},
+                    "description": "path to zerodiff-report.json "
+                                   "(default: ./zerodiff-report.json)"},
             },
         },
     },
     {
-        "name": "nodrift_quality",
+        "name": "zerodiff_quality",
         "description": (
             "Run the security/quality gate on source files: flags "
             "eval/exec, shell=True, SQL interpolation, hardcoded secrets, "
@@ -90,7 +90,7 @@ TOOLS = [
                     "description": "source files to analyze"},
                 "config": {
                     "type": "string",
-                    "description": "path to nodrift.toml for [quality] "
+                    "description": "path to zerodiff.toml for [quality] "
                                    "budgets (optional)"},
             },
             "required": ["files"],
@@ -172,7 +172,7 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "protocolVersion": request.get("params", {}).get(
                 "protocolVersion", PROTOCOL_VERSION),
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "nodrift", "version": __version__},
+            "serverInfo": {"name": "zerodiff", "version": __version__},
         })
     if method == "ping":
         return _result(request_id, {})
@@ -183,13 +183,13 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         name = params.get("name")
         args = params.get("arguments") or {}
         try:
-            if name == "nodrift_replay":
+            if name == "zerodiff_replay":
                 payload = _tool_replay(args)
                 is_error = payload["summary"]["divergence_count"] > 0
-            elif name == "nodrift_report":
+            elif name == "zerodiff_report":
                 payload = _tool_report(args)
                 is_error = payload["summary"]["divergence_count"] > 0
-            elif name == "nodrift_quality":
+            elif name == "zerodiff_quality":
                 payload = _tool_quality(args)
                 is_error = payload["errors"] > 0
             else:
@@ -203,7 +203,7 @@ def handle_request(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         except Exception as exc:
             return _result(request_id, {
                 "content": [{"type": "text",
-                             "text": "nodrift error: %r" % exc}],
+                             "text": "zerodiff error: %r" % exc}],
                 "isError": True,
             })
     if is_notification:

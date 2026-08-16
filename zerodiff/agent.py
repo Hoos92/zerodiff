@@ -1,6 +1,6 @@
 """The built-in minimal coding agent (`--llm provider:model`).
 
-NoDrift still ships no model: this is a thin, least-privilege API client
+ZeroDiff still ships no model: this is a thin, least-privilege API client
 for the LLM the user chooses and pays for. By design it is NOT a general
 agent -- no shell, no tools, no file access beyond an explicit allowlist,
 no network beyond the single LLM call per iteration. It receives the
@@ -22,10 +22,10 @@ import urllib.request
 
 DEFAULT_MAX_TOKENS = 8000
 FILE_BLOCK_RE = re.compile(
-    r"<<<NODRIFT-FILE:\s*(.+?)>>>\r?\n(.*?)<<<NODRIFT-END>>>", re.DOTALL)
+    r"<<<ZERODIFF-FILE:\s*(.+?)>>>\r?\n(.*?)<<<ZERODIFF-END>>>", re.DOTALL)
 
 SYSTEM_PROMPT = """\
-You are the fix agent inside NoDrift, a behavioral verification harness.
+You are the fix agent inside ZeroDiff, a behavioral verification harness.
 You receive a report of divergences between recorded original behavior
 and a rewrite, plus the current contents of the rewrite source files.
 
@@ -41,9 +41,9 @@ Rules:
 - Reply ONLY with full replacement contents for the files you change,
   in this exact format (one block per file, nothing else matters):
 
-<<<NODRIFT-FILE: filename.py>>>
+<<<ZERODIFF-FILE: filename.py>>>
 ...entire new file contents...
-<<<NODRIFT-END>>>
+<<<ZERODIFF-END>>>
 """
 
 _DEFAULT_BASE_URLS = {
@@ -90,7 +90,7 @@ class BuiltinAgent:
         if self.api_key_env:
             candidates.append(self.api_key_env)
         elif self.provider == "openai-compatible":
-            candidates += ["NODRIFT_LLM_API_KEY", "OPENAI_API_KEY"]
+            candidates += ["ZERODIFF_LLM_API_KEY", "OPENAI_API_KEY"]
         else:
             candidates.append(_DEFAULT_KEY_ENVS[self.provider])
         for env in candidates:
@@ -100,7 +100,7 @@ class BuiltinAgent:
         if self.provider == "openai-compatible":
             return "not-needed"  # local endpoints (Ollama) ignore the key
         raise AgentError(
-            "no API key: set %s (or [agent] api_key_env in nodrift.toml)"
+            "no API key: set %s (or [agent] api_key_env in zerodiff.toml)"
             % " or ".join(candidates))
 
     # -- wire formats ---------------------------------------------------------
@@ -145,7 +145,7 @@ class BuiltinAgent:
         if stopped_short:
             raise AgentError(
                 "LLM response was truncated at %d tokens; raise "
-                "[agent] max_tokens in nodrift.toml" % self.max_tokens)
+                "[agent] max_tokens in zerodiff.toml" % self.max_tokens)
         return text
 
     def _request(self, system, user):
@@ -196,17 +196,17 @@ class BuiltinAgent:
             name = os.path.relpath(path, workdir)
             display_names[os.path.normcase(os.path.abspath(path))] = name
             with open(path, "r", encoding="utf-8") as f:
-                sections.append("<<<NODRIFT-FILE: %s>>>\n%s<<<NODRIFT-END>>>"
+                sections.append("<<<ZERODIFF-FILE: %s>>>\n%s<<<ZERODIFF-END>>>"
                                 % (name, f.read()))
         try:
             reply = self._request(SYSTEM_PROMPT, "\n".join(sections))
         except AgentError as exc:
-            print("nodrift agent: %s" % exc)
+            print("zerodiff agent: %s" % exc)
             return 1
 
         blocks = FILE_BLOCK_RE.findall(reply)
         if not blocks:
-            print("nodrift agent: reply contained no NODRIFT-FILE blocks; "
+            print("zerodiff agent: reply contained no ZERODIFF-FILE blocks; "
                   "nothing written")
             return 1
         allowed = {os.path.normcase(os.path.abspath(p)) for p in files}
@@ -214,12 +214,12 @@ class BuiltinAgent:
         for name, content in blocks:
             name = name.strip()
             if os.path.isabs(name):
-                print("nodrift agent: rejected absolute path %r" % name)
+                print("zerodiff agent: rejected absolute path %r" % name)
                 continue
             target = os.path.normcase(
                 os.path.abspath(os.path.join(workdir, name)))
             if target not in allowed:
-                print("nodrift agent: rejected write outside the rewrite "
+                print("zerodiff agent: rejected write outside the rewrite "
                       "allowlist: %r" % name)
                 continue
             with open(target, "w", encoding="utf-8", newline="\n") as f:
@@ -227,9 +227,9 @@ class BuiltinAgent:
                         else content + "\n")
             wrote += 1
         if wrote == 0:
-            print("nodrift agent: no allowed files were written")
+            print("zerodiff agent: no allowed files were written")
             return 1
-        print("nodrift agent: wrote %d file(s) via %s:%s"
+        print("zerodiff agent: wrote %d file(s) via %s:%s"
               % (wrote, self.provider, self.model))
         return 0
 

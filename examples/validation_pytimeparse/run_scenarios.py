@@ -2,12 +2,12 @@
 expressions with a famously permissive grammar; returns None on failure
 instead of raising (a contract callers depend on).
 
-    nodrift record -o traces -- python run_scenarios.py
+    zerodiff record -o traces -- python run_scenarios.py
 """
 
-import nodrift
+import zerodiff
 
-nodrift.wrap("pytimeparse.timeparse", "timeparse")
+zerodiff.wrap("pytimeparse.timeparse", "timeparse")
 
 from pytimeparse.timeparse import timeparse  # noqa: E402
 

@@ -1,7 +1,7 @@
-"""nodrift insights: the local self-improvement loop."""
+"""zerodiff insights: the local self-improvement loop."""
 
-from nodrift.insights import generate
-from nodrift.quality import check_source
+from zerodiff.insights import generate
+from zerodiff.quality import check_source
 
 
 def _report(summary_overrides=None, divergences=None):
@@ -63,8 +63,8 @@ def test_inline_quality_suppression():
     source = ("import subprocess\n"
               "def f(c):\n"
               "    subprocess.run(c, shell=True)  "
-              "# nodrift-quality: ignore[shell-injection]\n")
+              "# zerodiff-quality: ignore[shell-injection]\n")
     assert check_source(source, "x.py") == []
     # without the annotation the same code is flagged
     assert check_source(source.replace(
-        "  # nodrift-quality: ignore[shell-injection]", ""), "x.py")
+        "  # zerodiff-quality: ignore[shell-injection]", ""), "x.py")

@@ -3,7 +3,7 @@
 Behavioral fidelity is necessary but not sufficient: a rewrite can match
 every recorded behavior and still be dangerous — `eval()` produces the
 same answers as arithmetic, right up until the input is hostile. So
-NoDrift enforces safe-code discipline in two places:
+ZeroDiff enforces safe-code discipline in two places:
 
 ## 1. When the agent writes (prevention)
 
@@ -13,14 +13,14 @@ no hardcoded secrets, never disable TLS verification, no swallowed
 exceptions, no mutable defaults, size/complexity/nesting budgets, and no
 new dependencies or I/O the original didn't have.
 
-## 2. When NoDrift verifies (enforcement)
+## 2. When ZeroDiff verifies (enforcement)
 
 Rules are worthless without teeth. After every iteration, the gate
 statically analyzes the rewrite files (stdlib `ast`, zero dependencies)
 and **the loop will not go green while error-severity findings remain** —
 they are appended to the fix prompt with hints, exactly like behavioral
-divergences. `nodrift migrate` and `nodrift loop` have it on by default
-(`--no-quality` to opt out); `nodrift quality FILE...` runs it standalone.
+divergences. `zerodiff migrate` and `zerodiff loop` have it on by default
+(`--no-quality` to opt out); `zerodiff quality FILE...` runs it standalone.
 
 ### Blocking rules (error severity)
 

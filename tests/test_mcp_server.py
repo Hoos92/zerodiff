@@ -8,7 +8,7 @@ import textwrap
 
 import pytest
 
-import nodrift
+import zerodiff
 
 
 @pytest.fixture()
@@ -29,14 +29,14 @@ def mcp_dir(tmp_path, monkeypatch):
             return x * 11
     """), encoding="utf-8")
     importlib.invalidate_caches()
-    nodrift.wrap("mcpleg_a", "scale")
-    nodrift.start_recording(str(tmp_path / "traces"))
+    zerodiff.wrap("mcpleg_a", "scale")
+    zerodiff.start_recording(str(tmp_path / "traces"))
     try:
         module = importlib.import_module("mcpleg_a")
         module.scale(1)
         module.scale(7)
     finally:
-        nodrift.stop_recording()
+        zerodiff.stop_recording()
     yield tmp_path
     for name in list(sys.modules):
         if name.startswith(("mcpleg_", "mcpnew_")):
@@ -46,7 +46,7 @@ def mcp_dir(tmp_path, monkeypatch):
 def _speak(cwd, *requests):
     payload = "".join(json.dumps(r) + "\n" for r in requests)
     proc = subprocess.run(
-        [sys.executable, "-m", "nodrift.mcp_server"],
+        [sys.executable, "-m", "zerodiff.mcp_server"],
         input=payload, capture_output=True, text=True, cwd=str(cwd),
         timeout=120)
     return [json.loads(line) for line in proc.stdout.splitlines() if line]
@@ -61,17 +61,17 @@ def test_initialize_and_list_tools(mcp_dir):
     responses = _speak(
         mcp_dir, INIT, INITIALIZED,
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-    assert responses[0]["result"]["serverInfo"]["name"] == "nodrift"
+    assert responses[0]["result"]["serverInfo"]["name"] == "zerodiff"
     tool_names = {t["name"] for t in responses[1]["result"]["tools"]}
-    assert tool_names == {"nodrift_replay", "nodrift_report",
-                          "nodrift_quality"}
+    assert tool_names == {"zerodiff_replay", "zerodiff_report",
+                          "zerodiff_quality"}
 
 
 def test_replay_tool_matching_rewrite(mcp_dir):
     responses = _speak(
         mcp_dir, INIT, INITIALIZED,
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-         "params": {"name": "nodrift_replay",
+         "params": {"name": "zerodiff_replay",
                     "arguments": {"traces_dir": "traces",
                                   "map": {"mcpleg_a": "mcpnew_good"}}}})
     result = responses[1]["result"]
@@ -85,7 +85,7 @@ def test_replay_tool_diverging_rewrite(mcp_dir):
     responses = _speak(
         mcp_dir, INIT, INITIALIZED,
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-         "params": {"name": "nodrift_replay",
+         "params": {"name": "zerodiff_replay",
                     "arguments": {"traces_dir": "traces",
                                   "map": {"mcpleg_a": "mcpnew_bad"}}}})
     result = responses[1]["result"]

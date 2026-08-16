@@ -1,14 +1,14 @@
 # Validation: `python-stdnum` (github.com/arthurdejong/python-stdnum) — the full pipeline
 
 The hardest validation so far, and the only one run **end-to-end through
-`nodrift migrate`**: three modules at once (luhn, isbn, iban), a custom
+`zerodiff migrate`**: three modules at once (luhn, isbn, iban), a custom
 exception hierarchy, and country-specific IBAN plug-ins.
 
 ```bash
 pip install python-stdnum
 printf 'your-team-signing-key!!' > team.key   # PowerShell: Set-Content team.key 'your-team-signing-key!!'
 
-nodrift migrate \
+zerodiff migrate \
     --driver "python run_scenarios.py" \
     --agent "python install_agent.py" \
     --max-iters 3 --attest --key-file team.key
@@ -22,8 +22,8 @@ The pipeline records 269 unique behaviors across 14 boundaries, scaffolds
 **269 of 269 recorded behaviors match**, and signs an attestation. Then:
 
 ```bash
-nodrift attest -t traces --key-file team.key --code luhn_v2.py --code isbn_v2.py --code iban_v2.py
-nodrift verify-attestation --key-file team.key -t traces   # exit 0
+zerodiff attest -t traces --key-file team.key --code luhn_v2.py --code isbn_v2.py --code iban_v2.py
+zerodiff verify-attestation --key-file team.key -t traces   # exit 0
 # change one character of any attested file and verify again -> exit 1
 ```
 

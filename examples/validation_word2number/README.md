@@ -9,8 +9,8 @@ reproduce all of it.
 
 ```bash
 pip install word2number
-nodrift record -o traces -- python run_scenarios.py
-nodrift replay -t traces
+zerodiff record -o traces -- python run_scenarios.py
+zerodiff replay -t traces
 ```
 
 See [docs/VALIDATION.md](../../docs/VALIDATION.md) for first-pass numbers.

@@ -12,7 +12,7 @@ python -m pytest tests/ -q
 
 ## Ground rules
 
-- **Python 3.8+ and zero runtime dependencies** in the `nodrift/` package.
+- **Python 3.8+ and zero runtime dependencies** in the `zerodiff/` package.
   The built-in TOML-subset reader exists for exactly this reason.
 - **The recorder must never break the host program**: any failure inside
   recording is swallowed and counted, never raised.
@@ -22,5 +22,5 @@ python -m pytest tests/ -q
   claims will not be merged.
 - Every behavior fix or feature lands with a test. The golden self-test
   (`tests/test_golden_example.py`) must stay green.
-- `nodrift/enterprise.py` is source-available under commercial terms (see
+- `zerodiff/enterprise.py` is source-available under commercial terms (see
   COMMERCIAL.md); everything else is MIT.

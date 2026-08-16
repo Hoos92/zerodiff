@@ -27,7 +27,7 @@ jobs:
       - run: pip install -e .[dev]
       - run: python -m pytest tests/ -q
       - name: demo smoke test
-        run: nodrift demo
+        run: zerodiff demo
       - name: dogfood the quality gate on our own source
         shell: bash
-        run: nodrift quality nodrift/*.py
+        run: zerodiff quality zerodiff/*.py

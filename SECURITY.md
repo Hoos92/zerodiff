@@ -11,19 +11,19 @@ for suspected vulnerabilities.
 - **The core harness makes no network calls.** Recording, replay,
   reporting, and attestation are entirely local; nothing is uploaded
   anywhere. The one exception is the optional built-in agent
-  (`--llm` / `nodrift llm-check`), which calls the LLM endpoint you
+  (`--llm` / `zerodiff llm-check`), which calls the LLM endpoint you
   configure with your key — see the `--llm` note below for exactly what
   it sends.
 - **Traces contain real runtime data.** Treat the traces directory like a
-  database dump: gitignored by default (`nodrift init`), redactable at
+  database dump: gitignored by default (`zerodiff init`), redactable at
   record time via `redact_fields` (redacted values never reach disk).
 - **Replay executes the code under test.** In-process replay runs the
   rewrite inside the harness process; use `--isolate` for untrusted
   rewrites (worker subprocess; crashes/hangs are contained and reported).
   Replaying side-effecting code performs the side effects — point replay
   at disposable environments.
-- **`nodrift loop` / `nodrift migrate` run the agent command you supply**
-  with your shell and your permissions. NoDrift does not sandbox your
+- **`zerodiff loop` / `zerodiff migrate` run the agent command you supply**
+  with your shell and your permissions. ZeroDiff does not sandbox your
   agent; choose its permission flags deliberately.
 - **The built-in agent (`--llm`) sends fix prompts to your chosen LLM
   provider.** Fix prompts contain divergence details (recorded

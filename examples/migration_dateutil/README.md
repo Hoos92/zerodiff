@@ -7,11 +7,11 @@ edits**, then verify a clean modern rewrite against it.
 ```bash
 pip install python-dateutil
 
-# 1. record ~1,100 real behaviors (no nodrift code in any user file)
-nodrift record --include dateutil.easter -o traces -- python run_scenarios.py
+# 1. record ~1,100 real behaviors (no zerodiff code in any user file)
+zerodiff record --include dateutil.easter -o traces -- python run_scenarios.py
 
 # 2. replay against the modern rewrite
-nodrift replay -t traces
+zerodiff replay -t traces
 ```
 
 `easter_modern.py` already contains the post-fix version that matches

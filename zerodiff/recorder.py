@@ -1,8 +1,8 @@
 """Recording behavior at function boundaries.
 
 Recording is active when a trace directory is set, either programmatically
-(``nodrift.start_recording(dir)``) or via the ``NODRIFT_TRACE_DIR``
-environment variable (which is how ``nodrift record -- <cmd>`` activates it
+(``zerodiff.start_recording(dir)``) or via the ``ZERODIFF_TRACE_DIR``
+environment variable (which is how ``zerodiff record -- <cmd>`` activates it
 in a child process). When recording is inactive, decorated functions run with
 near-zero overhead.
 
@@ -22,8 +22,8 @@ from typing import Any, Callable, Dict, Optional
 
 from . import serializer, store
 
-_ENV_VAR = "NODRIFT_TRACE_DIR"
-_ENV_CONFIG = "NODRIFT_CONFIG"
+_ENV_VAR = "ZERODIFF_TRACE_DIR"
+_ENV_CONFIG = "ZERODIFF_CONFIG"
 
 _seq = itertools.count()  # global chronology across all boundaries
 
@@ -42,7 +42,7 @@ def _drop() -> None:
 
 
 def _get_config():
-    """Config for record-time redaction (NODRIFT_CONFIG or ./nodrift.toml).
+    """Config for record-time redaction (ZERODIFF_CONFIG or ./zerodiff.toml).
     A broken config must not break the recorded program."""
     global _config
     if _config is None:
@@ -133,7 +133,7 @@ def _write_trace(target: str, trace_dir: str, encoded_input: Dict,
                 "seq": next(_seq),
                 "duration_ms": round(duration_ms, 3),
                 "py": "{}.{}.{}".format(*__import__("sys").version_info[:3]),
-                "nodrift": _version(),
+                "zerodiff": _version(),
             },
         }
         if mutations is not None:
@@ -204,7 +204,7 @@ def record(fn: Callable) -> Callable:
         finish({"type": "return", "value": encoded_value}, duration)
         return result
 
-    wrapper.__nodrift_wrapped__ = fn
+    wrapper.__zerodiff_wrapped__ = fn
     return wrapper
 
 
@@ -226,11 +226,11 @@ def record_class(module_name: str, class_name: str,
         # whatever descriptor they are behind
         if isinstance(attr, (staticmethod, classmethod)):
             inner = attr.__func__
-            if getattr(inner, "__nodrift_wrapped__", None) is not None:
+            if getattr(inner, "__zerodiff_wrapped__", None) is not None:
                 continue
             setattr(cls, name, type(attr)(record(inner)))
         elif callable(attr):
-            if getattr(attr, "__nodrift_wrapped__", None) is not None:
+            if getattr(attr, "__zerodiff_wrapped__", None) is not None:
                 continue
             setattr(cls, name, record(attr))
         else:
@@ -246,12 +246,12 @@ def unwrap_class(module_name: str, class_name: str) -> int:
     restored = 0
     for name, attr in list(vars(cls).items()):
         if isinstance(attr, (staticmethod, classmethod)):
-            original = getattr(attr.__func__, "__nodrift_wrapped__", None)
+            original = getattr(attr.__func__, "__zerodiff_wrapped__", None)
             if original is not None:
                 setattr(cls, name, type(attr)(original))
                 restored += 1
         elif callable(attr):
-            original = getattr(attr, "__nodrift_wrapped__", None)
+            original = getattr(attr, "__zerodiff_wrapped__", None)
             if original is not None:
                 setattr(cls, name, original)
                 restored += 1
@@ -268,7 +268,7 @@ def wrap(module_name: str, function_name: str) -> Callable:
     """
     owner, attr = _resolve_owner(module_name, function_name)
     original = getattr(owner, attr)
-    if getattr(original, "__nodrift_wrapped__", None) is not None:
+    if getattr(original, "__zerodiff_wrapped__", None) is not None:
         return original
     wrapped = record(original)
     setattr(owner, attr, wrapped)
@@ -288,7 +288,7 @@ def unwrap(module_name: str, function_name: str) -> bool:
     wrapper was removed. Instrumentation otherwise lasts for the life of the
     process, which leaks between tests sharing an interpreter."""
     owner, attr = _resolve_owner(module_name, function_name)
-    original = getattr(getattr(owner, attr), "__nodrift_wrapped__", None)
+    original = getattr(getattr(owner, attr), "__zerodiff_wrapped__", None)
     if original is None:
         return False
     setattr(owner, attr, original)

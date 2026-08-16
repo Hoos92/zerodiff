@@ -20,7 +20,7 @@ EXAMPLE = os.path.join(os.path.dirname(__file__), os.pardir, "examples",
 
 def _run(cwd, *args):
     return subprocess.run(
-        [sys.executable, "-m", "nodrift.cli"] + list(args),
+        [sys.executable, "-m", "zerodiff.cli"] + list(args),
         cwd=cwd, capture_output=True, text=True)
 
 
@@ -28,7 +28,7 @@ def _run(cwd, *args):
 def demo_dir(tmp_path_factory):
     target = str(tmp_path_factory.mktemp("demo") / "legacy_pricing")
     shutil.copytree(EXAMPLE, target, ignore=shutil.ignore_patterns(
-        "traces", "nodrift-report.*", "__pycache__"))
+        "traces", "zerodiff-report.*", "__pycache__"))
     proc = _run(target, "record", "-o", "traces", "--",
                 sys.executable, "driver.py")
     assert proc.returncode == 0, proc.stderr + proc.stdout
@@ -40,7 +40,7 @@ def test_equivalent_rewrite_matches_everything(demo_dir):
     proc = _run(demo_dir, "replay", "-t", "traces")
     assert proc.returncode == 0, proc.stderr + proc.stdout
 
-    with open(os.path.join(demo_dir, "nodrift-report.json"),
+    with open(os.path.join(demo_dir, "zerodiff-report.json"),
               encoding="utf-8") as f:
         report = json.load(f)
     s = report["summary"]
@@ -55,7 +55,7 @@ def test_buggy_rewrite_all_five_bugs_caught(demo_dir):
                 "--map", "pricing:pricing_buggy")
     assert proc.returncode == 1, proc.stderr + proc.stdout
 
-    with open(os.path.join(demo_dir, "nodrift-report.json"),
+    with open(os.path.join(demo_dir, "zerodiff-report.json"),
               encoding="utf-8") as f:
         report = json.load(f)
     divs = report["divergences"]
@@ -85,7 +85,7 @@ def test_report_md_renders_honestly(demo_dir):
     proc = _run(demo_dir, "report", "--format", "md")
     assert "replayed behaviors matched" in proc.stdout
     assert "identical" not in proc.stdout.lower()
-    md_path = os.path.join(demo_dir, "nodrift-report.md")
+    md_path = os.path.join(demo_dir, "zerodiff-report.md")
     with open(md_path, encoding="utf-8") as f:
         md = f.read()
     assert "recorded behaviors" in md

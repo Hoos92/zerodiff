@@ -1,7 +1,7 @@
 import pytest
 
-from nodrift import scrubbers
-from nodrift.config import Config, _parse_toml_subset
+from zerodiff import scrubbers
+from zerodiff.config import Config, _parse_toml_subset
 
 
 class TestScrub:

@@ -5,7 +5,7 @@ most often introduces, and blocks the loop until they're gone. Findings
 have severities: **error** findings block (the loop won't go green);
 **warn** findings are reported and handed to the agent but don't block.
 
-Honesty note (same rules as the rest of NoDrift): static analysis proves
+Honesty note (same rules as the rest of ZeroDiff): static analysis proves
 the absence of *these specific patterns*, not the absence of all
 vulnerabilities. The gate complements behavioral verification; neither
 replaces security review for high-stakes code.
@@ -286,11 +286,11 @@ def _max_nesting(fn_node) -> int:
 
 
 _INLINE_IGNORE_RE = re.compile(
-    r"#\s*nodrift-quality:\s*ignore\[([a-z\-, ]+)\]")
+    r"#\s*zerodiff-quality:\s*ignore\[([a-z\-, ]+)\]")
 
 
 def _inline_ignores(source: str) -> Dict[int, set]:
-    """`# nodrift-quality: ignore[rule]` suppresses that rule on that line
+    """`# zerodiff-quality: ignore[rule]` suppresses that rule on that line
     -- visible in the diff, reviewable, unlike a global disable."""
     ignores = {}
     for lineno, line in enumerate(source.splitlines(), 1):

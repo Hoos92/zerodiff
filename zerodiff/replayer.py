@@ -60,8 +60,8 @@ def resolve_callable(target: str):
             return None, ("module %r imports fine but has no attribute "
                           "%r" % (module_name,
                                   ".".join(parts[split:])))
-        # unwrap if the replacement itself is decorated with @nodrift.record
-        inner = getattr(obj, "__nodrift_wrapped__", None)
+        # unwrap if the replacement itself is decorated with @zerodiff.record
+        inner = getattr(obj, "__zerodiff_wrapped__", None)
         return (inner if inner is not None else obj), None
     return None, "no importable module found for %r" % target
 
@@ -136,7 +136,7 @@ class InProcessInvoker:
 
 
 class SubprocessInvoker:
-    """Replays each call in a worker subprocess (see nodrift.worker).
+    """Replays each call in a worker subprocess (see zerodiff.worker).
 
     A worker that dies or hangs is reported as a `process_crash` divergence
     and a fresh worker is started for the next trace.
@@ -154,7 +154,7 @@ class SubprocessInvoker:
 
     def _start(self) -> bool:
         self._proc = subprocess.Popen(
-            [sys.executable, "-m", "nodrift.worker"],
+            [sys.executable, "-m", "zerodiff.worker"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             text=True, encoding="utf-8", bufsize=1)
         self._queue = queue.Queue()
@@ -361,7 +361,7 @@ def replay_one(trace: Dict[str, Any], mappings: Dict[str, str],
             differ.KIND_REPLAY_ERROR, target, tid, "harness", None,
             outcome.get("error"),
             "the harness itself failed while replaying this trace -- this "
-            "is a NoDrift problem, not evidence about the rewrite; please "
+            "is a ZeroDiff problem, not evidence about the rewrite; please "
             "report it.", input_preview=preview))
         return
 
@@ -469,7 +469,7 @@ def _replay_traces(traces: List[Dict[str, Any]], mappings: Dict[str, str],
                     differ.KIND_REPLAY_ERROR, target, trace.get("id", "?"),
                     "harness", None, repr(exc),
                     "the harness itself failed while replaying this trace "
-                    "-- this is a NoDrift problem, not evidence about the "
+                    "-- this is a ZeroDiff problem, not evidence about the "
                     "rewrite; please report it."))
     finally:
         invoker.close()

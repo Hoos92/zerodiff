@@ -1,6 +1,6 @@
-# NoDrift architecture
+# ZeroDiff architecture
 
-NoDrift is a behavioral equivalence harness. It records what code *actually
+ZeroDiff is a behavioral equivalence harness. It records what code *actually
 does* at chosen boundaries, then verifies that a replacement implementation
 does the same thing for every recorded input. The recorded behavior — not the
 docs, not the tests, not anyone's memory — is treated as ground truth.
@@ -17,23 +17,23 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
 
 | Module          | Responsibility |
 |-----------------|----------------|
-| `recorder.py`   | `@nodrift.record` decorator, `nodrift.wrap()`, activation via API or `NODRIFT_TRACE_DIR` env var; captures args/kwargs/return/exception per call; applies record-time redaction |
+| `recorder.py`   | `@zerodiff.record` decorator, `zerodiff.wrap()`, activation via API or `ZERODIFF_TRACE_DIR` env var; captures args/kwargs/return/exception per call; applies record-time redaction |
 | `autohook.py`   | zero-edit auto-instrumentation: meta-path finder that wraps public module-level functions of modules matching `--include` patterns; injected into child processes via a temporary `sitecustomize` |
 | `worker.py`     | isolated replay worker (`--isolate`): JSON-lines protocol on a duplicated fd while user prints divert to stderr; crashes/hangs become reported behavior |
-| `loop.py`       | agent feedback loop (`nodrift loop`): replay → fix prompt with all divergences → invoke any agent CLI → repeat; always isolates so agent edits are re-imported fresh |
-| `mcp_server.py` | zero-dep MCP server (`nodrift mcp`): JSON-RPC 2.0 over stdio exposing nodrift_replay/nodrift_report/nodrift_quality to MCP-capable agents; isolates by default because the server is long-lived, and restores its working directory after every call |
+| `loop.py`       | agent feedback loop (`zerodiff loop`): replay → fix prompt with all divergences → invoke any agent CLI → repeat; always isolates so agent edits are re-imported fresh |
+| `mcp_server.py` | zero-dep MCP server (`zerodiff mcp`): JSON-RPC 2.0 over stdio exposing zerodiff_replay/zerodiff_report/zerodiff_quality to MCP-capable agents; isolates by default because the server is long-lived, and restores its working directory after every call |
 | `testing.py`    | `verify_traces()` one-liner for pytest/unittest: raises BehaviorMismatch (an AssertionError) with a divergence digest |
-| `scaffold.py`   | `nodrift init` (project scaffolding) and `nodrift demo` (guided 30-second example) |
+| `scaffold.py`   | `zerodiff init` (project scaffolding) and `zerodiff demo` (guided 30-second example) |
 | `enterprise.py` | commercial tier (see COMMERCIAL.md): HMAC-signed tamper-evident attestations, replay history |
-| `migrate.py`    | `nodrift migrate`: the paired pipeline — record → scaffold rewrite stubs from recorded boundaries → agent loop → optional attestation. The agent writes; NoDrift judges |
-| `agent.py`      | built-in minimal agent (`--llm provider:model`): zero-dep API client for anthropic/openai/openai-compatible endpoints; least-privilege fix-writer (no shell/tools, allowlisted writes via sentinel file blocks); `nodrift llm-check` preflight |
+| `migrate.py`    | `zerodiff migrate`: the paired pipeline — record → scaffold rewrite stubs from recorded boundaries → agent loop → optional attestation. The agent writes; ZeroDiff judges |
+| `agent.py`      | built-in minimal agent (`--llm provider:model`): zero-dep API client for anthropic/openai/openai-compatible endpoints; least-privilege fix-writer (no shell/tools, allowlisted writes via sentinel file blocks); `zerodiff llm-check` preflight |
 | `serializer.py` | canonical, deterministic encoding of Python values to JSON-safe trees; adapter registry; opaque fallback with digest |
 | `store.py`      | JSONL trace files (one per boundary), schema versioning, iteration |
-| `config.py`     | `nodrift.toml` loading (mappings, scrubbers); minimal built-in TOML-subset reader so Python 3.8 works with zero dependencies |
+| `config.py`     | `zerodiff.toml` loading (mappings, scrubbers); minimal built-in TOML-subset reader so Python 3.8 works with zero dependencies |
 | `scrubbers.py`  | noise normalization applied to both sides before diffing: ignored fields, regex scrubs (UUID/timestamp built-ins), redaction |
 | `replayer.py`   | resolves each recorded boundary through the old→new mapping, decodes inputs, invokes the replacement with per-call isolation |
 | `differ.py`     | deep structural diff producing typed `Divergence` objects with paths and agent-actionable hints; float tolerance lives here |
-| `report.py`     | `nodrift-report.json` (machine/agent-first) and `nodrift-report.md` (human) |
+| `report.py`     | `zerodiff-report.json` (machine/agent-first) and `zerodiff-report.md` (human) |
 | `cli.py`        | all 15 subcommands (`record`, `replay`, `report`, `loop`, `migrate`, `guard`, `quality`, `insights`, `mcp`, `init`, `demo`, `llm-check`, `attest`, `verify-attestation`, `history`); exit codes 0/1/2 |
 
 ## Trace schema (JSONL, one call per line)
@@ -45,7 +45,7 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
  "input": {"args": ["<encoded>"], "kwargs": {}},
  "output": {"type": "return", "value": "<encoded>"},
  "meta": {"ts": "2026-07-03T10:00:00Z", "duration_ms": 1.2,
-          "py": "3.8.5", "nodrift": "0.1.0"}}
+          "py": "3.8.5", "zerodiff": "0.1.0"}}
 ```
 
 - `output.type` is `"return"` or `"exception"`; exceptions record
@@ -62,7 +62,7 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
   mutated"; an absent field means "not captured" (old traces / `[record]
   mutations = false`) and is not checked.
 - `meta.seq` is a process-wide counter preserving global chronology;
-  `nodrift replay --in-order` replays **every** call (no deduplication)
+  `zerodiff replay --in-order` replays **every** call (no deduplication)
   sorted by `(ts, seq)` — required for code with module-level state,
   where identical inputs legitimately produce different outputs.
 - `boundary.kind` is extensible. v1 only emits `"function"`; an HTTP recorder
@@ -85,7 +85,7 @@ docs, not the tests, not anyone's memory — is treated as ground truth.
   `Enum` → type + value, dataclasses → type + fields.
 - Anything else → `{"__opaque__": {"type": "...", "repr": "...",
   "digest": "..."}}`. Opaque values are compared by digest and every such
-  comparison is flagged `weak_comparison` in the report — NoDrift never
+  comparison is flagged `weak_comparison` in the report — ZeroDiff never
   silently pretends it fully compared something it couldn't.
 - Cycle detection and a depth cap protect the recorder from pathological
   structures; both degrade to opaque encoding rather than crashing the host
@@ -103,7 +103,7 @@ contain opaque values cannot be faithfully replayed; they are reported as
 | `type_mismatch`       | different type/shape at `path` (list vs tuple, int vs str…) |
 | `exception_mismatch`  | raised vs returned, different exception type, or different message |
 | `missing_boundary`    | mapping doesn't resolve to a callable in the rewrite |
-| `weak_comparison`     | opaque digests differ — a change NoDrift can see but not explain |
+| `weak_comparison`     | opaque digests differ — a change ZeroDiff can see but not explain |
 | `replay_error`        | the harness itself failed on this trace (reported, never hidden) |
 | `process_crash`       | (`--isolate` only) the rewrite killed or hung the worker process where the original completed |
 
@@ -140,7 +140,7 @@ and a generated `hint` — a sentence written for a coding agent, e.g.:
   `process_crash` divergences.
 - **Auto-instrumentation scope**: `--include` wraps public module-level
   functions of filesystem-based modules only; class methods and closures
-  need `nodrift.wrap` or the decorator. The injected `sitecustomize`
+  need `zerodiff.wrap` or the decorator. The injected `sitecustomize`
   shadows any existing one for that run.
 - **Recording overhead** makes it suited to test/staging/driver runs, not hot
   production paths.

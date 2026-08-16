@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nodrift"
+name = "zerodiff"
 dynamic = ["version"]
 description = "Behavioral equivalence harness: record what your legacy code really does, replay it against an AI rewrite, and get every divergence as an actionable report."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.8"
-authors = [{ name = "NoDrift contributors" }]
+authors = [{ name = "ZeroDiff contributors" }]
 keywords = ["testing", "migration", "ai-agents", "characterization-testing", "verification"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -30,15 +30,15 @@ dependencies = []
 dev = ["pytest>=7.0"]
 
 [project.scripts]
-nodrift = "nodrift.cli:main"
+zerodiff = "zerodiff.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Hoos92/nodrift"
-Issues = "https://github.com/Hoos92/nodrift/issues"
-Changelog = "https://github.com/Hoos92/nodrift/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Hoos92/zerodiff"
+Issues = "https://github.com/Hoos92/zerodiff/issues"
+Changelog = "https://github.com/Hoos92/zerodiff/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
-packages = ["nodrift"]
+packages = ["zerodiff"]
 
 [tool.setuptools.dynamic]
-version = { attr = "nodrift.__version__" }
+version = { attr = "zerodiff.__version__" }
