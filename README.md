@@ -30,7 +30,7 @@ $ zerodiff replay -t traces --map "billing:billing_v2"
 ## Quick start
 
 ```bash
-pip install "zerodiff @ git+https://github.com/Hoos92/zerodiff"
+pip install zerodiff
 # (or, from a checkout: pip install -e .)
 zerodiff demo    # 30-second guided example: record a legacy function,
                 # catch the silent change a rewrite introduced

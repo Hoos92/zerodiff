@@ -30,8 +30,7 @@ runs:
   steps:
     - name: Install zerodiff
       shell: bash
-      # once published on PyPI this becomes simply: pip install zerodiff
-      run: pip install "zerodiff @ git+https://github.com/Hoos92/zerodiff"
+      run: pip install zerodiff
     - name: Replay recorded behaviors
       shell: bash
       working-directory: ${{ inputs.workdir }}
