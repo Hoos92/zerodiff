@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Email <husamalkinani92@gmail.com> with "SECURITY" in the subject. You will
+Email <hooshub@gmail.com> with "SECURITY" in the subject. You will
 get an acknowledgement within 72 hours. Please do not open public issues
 for suspected vulnerabilities.
 

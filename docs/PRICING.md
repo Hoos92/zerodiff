@@ -29,6 +29,6 @@ recorded behavioral baseline, agent-driven rewrite, 100%-of-recorded-
 behaviors verification, signed evidence bundle. Priced per migration
 scope after a free assessment.
 
-Contact: <husamalkinani92@gmail.com> ("ZeroDiff" in the subject).
+Contact: <hooshub@gmail.com> ("ZeroDiff" in the subject).
 All numbers are launch-phase and negotiable — early design partners
 shape the roadmap.

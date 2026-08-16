@@ -29,7 +29,7 @@ long-term evidence retention.
 
 ## Get a license
 
-Email <husamalkinani92@gmail.com> with "ZeroDiff license" in the subject,
+Email <hooshub@gmail.com> with "ZeroDiff license" in the subject,
 and say which tier fits ([docs/PRICING.md](docs/PRICING.md)). Early-adopter
 terms are deliberately simple and inexpensive — what matters most right
 now is working with real migrations.
