@@ -1,0 +1,23 @@
+LICENSE NOTICE — this directory is NOT MIT-licensed
+====================================================
+
+`num2words_modern.py` is a re-implementation of behavior recorded from
+**num2words** (https://github.com/savoirfairelinux/num2words), Copyright (c)
+Savoir-faire Linux and contributors, which is licensed under the **GNU
+Lesser General Public License**.
+
+It was written clean-room — from recorded input/output behavior rather than
+from reading the upstream source. Even so, it reproduces that library's
+observable behavior deliberately and exactly, so it is distributed here
+under the **LGPL-2.1-or-later** rather than ZeroDiff's MIT license. We would
+rather over-attribute than rely on a clean-room argument we cannot prove to
+a reader.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+If you want an MIT-licensed starting point, do not copy from this directory.
+
+Nothing in this notice affects the rest of ZeroDiff, which is MIT-licensed
+(see the root LICENSE file). This directory exists only to demonstrate and
+document the verification method; the tool itself contains no third-party
+code.

@@ -1,3 +1,7 @@
+# Re-implements behavior recorded from num2words (Copyright (c)
+# Savoir-faire Linux and contributors), licensed LGPL. Distributed
+# under the LGPL-2.1-or-later, NOT under ZeroDiff's MIT license.
+# See the NOTICE file in this directory.
 """Modern rewrite of num2words for English: cardinal, ordinal,
 ordinal_num, and year conversions."""
 

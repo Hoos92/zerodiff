@@ -206,16 +206,28 @@ Questions like "do I need an LLM for this?" (no) are answered in the
 
 ## Licensing
 
-The core harness is MIT and always will be. Organization-grade assurance —
-signed tamper-evident attestations (`zerodiff attest`), verification history
-(`zerodiff history`) — is source-available under a commercial license: see
-[COMMERCIAL.md](COMMERCIAL.md) for what's covered and
-[docs/PRICING.md](docs/PRICING.md) for the tiers.
+The core harness is MIT and always will be — record, replay, report, the
+quality gate, the agent loop, the MCP server, `guard`, `insights`, the
+integrations. Fork it, sell it, do what you like.
+
+One file is not MIT: `zerodiff/enterprise.py`, which provides signed
+tamper-evident attestations (`zerodiff attest`) and verification history
+(`zerodiff history`). It is source-available — free for evaluation,
+development, CI, and research — and requires a commercial license only when
+an attestation is relied upon as evidence in the course of business. Terms
+in [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL), tiers in
+[docs/PRICING.md](docs/PRICING.md), how to get one in
+[COMMERCIAL.md](COMMERCIAL.md).
+
+Two example directories (`examples/validation_stdnum/`,
+`examples/validation_num2words/`) contain re-implementations derived from
+LGPL upstream libraries and are LGPL-licensed; see the `NOTICE` in each. The
+tool itself contains no third-party code.
 
 ## Status
 
-**v0.14** — Python 3.8+, function-level boundaries, zero runtime
-dependencies, 251 tests.
+**v0.15** — Python 3.8+, function-level boundaries, zero runtime
+dependencies, 251 tests. `pip install zerodiff`.
 
 The verb set is stable: `record` / `replay` / `report` (0.1–0.2, with
 zero-edit `--include` instrumentation and `--isolate` crash-safe replay),
@@ -234,6 +246,9 @@ reported without the evidence to back it (a zero-behavior replay reading as
 a pass, attestations signing failed runs) — see the
 [CHANGELOG](CHANGELOG.md).
 
+0.15 renamed the project from NoDrift to ZeroDiff after an unrelated
+package claimed the old name on PyPI.
+
 Roadmap: HTTP service-level recording and side-effect interception.
 
-MIT licensed.
+MIT licensed, except `zerodiff/enterprise.py` — see [Licensing](#licensing).

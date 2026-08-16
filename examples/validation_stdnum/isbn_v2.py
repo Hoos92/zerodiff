@@ -1,3 +1,7 @@
+# Derived from python-stdnum (Copyright (c) Arthur de Jong and
+# contributors), licensed LGPL-2.1-or-later. This file is a derivative
+# work and is distributed under the LGPL, NOT under ZeroDiff's MIT
+# license. See the NOTICE file in this directory.
 """Modern rewrite of stdnum.isbn (validate/compact/isbn_type/convert).
 
 Faithful quirks preserved: format is checked before length (so "" raises

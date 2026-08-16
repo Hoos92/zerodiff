@@ -2,6 +2,23 @@ MIT License
 
 Copyright (c) 2026 HoosHub LLC
 
+SCOPE OF THIS LICENSE
+---------------------
+This MIT license covers all of ZeroDiff EXCEPT the following, which are
+licensed separately:
+
+  * zerodiff/enterprise.py  -- source-available; production use requires a
+    commercial license. See LICENSE-COMMERCIAL and COMMERCIAL.md.
+
+  * examples/validation_num2words/  and  examples/validation_stdnum/  --
+    these contain re-implementations derived from LGPL-licensed upstream
+    libraries and are distributed under the LGPL. See the NOTICE file in
+    each of those directories.
+
+Everything else in this repository is MIT-licensed under the terms below.
+
+---------------------
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights

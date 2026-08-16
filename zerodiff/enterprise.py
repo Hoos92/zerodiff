@@ -1,8 +1,15 @@
 """ZeroDiff Enterprise: signed evidence and replay history.
 
-Copyright (c) 2026 ZeroDiff. This module is source-available for evaluation
-and non-production use; production use requires a commercial license.
-See COMMERCIAL.md. The rest of the package is MIT-licensed.
+Copyright (c) 2026 HoosHub LLC. All rights reserved.
+
+THIS FILE IS NOT MIT-LICENSED. It is source-available: free to read, run,
+and modify for evaluation, development, CI, research, and contribution;
+production use -- where an attestation is relied upon as evidence in the
+course of business -- requires a commercial license.
+
+See LICENSE-COMMERCIAL for the terms, docs/PRICING.md for the tiers, and
+COMMERCIAL.md for how to get one. Every other file in this package is
+MIT-licensed under LICENSE.
 """
 
 import datetime

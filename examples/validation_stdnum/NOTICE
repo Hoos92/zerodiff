@@ -1,0 +1,25 @@
+LICENSE NOTICE — this directory is NOT MIT-licensed
+====================================================
+
+The re-implementations in this directory:
+
+    luhn_v2.py, isbn_v2.py, iban_v2.py, impl_store/*.py
+
+are derived from **python-stdnum** (https://arthurdejong.org/python-stdnum/),
+Copyright (c) Arthur de Jong and contributors, which is licensed under the
+**GNU Lesser General Public License, version 2.1 or later**.
+
+They were produced by `zerodiff migrate`, whose fix prompts include the
+original module's source as read-only reference material. They are
+therefore derivative works of LGPL code, and are distributed here under the
+**LGPL-2.1-or-later**, not under ZeroDiff's MIT license.
+
+Full license text: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+You may use, modify, and redistribute these files under the LGPL. If you
+want an MIT-licensed starting point, do not copy from this directory.
+
+Nothing in this notice affects the rest of ZeroDiff, which is MIT-licensed
+(see the root LICENSE file). This directory exists only to demonstrate and
+document the verification method; the tool itself contains no third-party
+code.

@@ -15,7 +15,15 @@ Claude Code hook, `zerodiff init`, `zerodiff demo`, and the
 The `zerodiff/enterprise.py` module is source-available for evaluation and
 non-production use; **production use requires a commercial license**. Both
 paid tiers — Team and Enterprise — include that license; see
-[docs/PRICING.md](docs/PRICING.md) for what separates them.
+[docs/PRICING.md](docs/PRICING.md) for what separates them, and
+[LICENSE-COMMERCIAL](LICENSE-COMMERCIAL) for the actual terms.
+
+To be precise about where the line falls: **free** covers evaluation,
+development, CI, research, and contribution. **Paid** covers relying on an
+attestation as evidence in the course of business — showing it to an
+auditor or customer, gating a production release on it, or building it into
+a product you sell. Everything else in ZeroDiff is MIT and always will be,
+including with `enterprise.py` deleted.
 
 | feature | what it's for |
 |---|---|

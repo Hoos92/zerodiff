@@ -97,24 +97,42 @@ three passes**, using nothing but the report hints. There's a built-in loop
 verification natively, a GitHub Action, and a Claude Code hook that blocks
 any edit which breaks recorded behavior.
 
-## And it isn't just my hand-written rewrites
+## The obvious objection
 
-To rule out "you wrote bad rewrites on purpose," I handed the same job to a
-real LLM with no human in the loop — `zerodiff migrate --llm openai:...`, a
-live funded key, the model writing every line, the loop driving itself off
-the report hints:
+You should be suspicious of that table. I commissioned those rewrites *and*
+I built the tool that catches them. If I wanted a good demo, I could simply
+have written bad code. So don't take the hand-written cohort as the
+evidence — take this instead.
+
+I handed the same job to a real LLM with no human in the loop:
+`zerodiff migrate --llm openai:...`, a live funded key, the model writing
+every line, the loop driving itself off the report hints. I didn't
+intervene, and I couldn't have rigged the outcome:
 
 - `roman` (10,083 behaviors) → **10,083/10,083**, two agent calls.
 - `pytimeparse` (42) → **42/42**, a single call.
 - a shipping demo (37) → **37/37**, a single call.
 
-And where the model *couldn't* — a recursive Mustache engine whose
-recording captures its own internal recursion, a regex-dense validator with
-a bizarre contract where invalid inputs return a *falsy error object*
-instead of raising — the gate simply stayed red. 148 wrong-rewrite
-divergences caught, nothing broken shipped. That's the whole point: when
-the agent can do it, verification proves it; when it can't, the gate holds
-the line. The capability frontier gets measured, not guessed.
+Note what those are: **successes**. The model did the migration, unattended,
+and the harness confirmed it. A tool built to make AI look bad would not
+report that.
+
+Then the hard cohort, same setup, GPT-4o:
+
+| target | why it's brutal | best unattended result |
+|---|---|---|
+| `chevron` (Mustache engine) | recording captures the engine's own recursive internal calls | 23/77, then it **regressed to 0** chasing hints |
+| `validators` | invalid inputs return a *falsy error object* instead of raising | oscillated 14 ↔ 23 forever |
+| `python-dotenv` | quoting and interpolation quirks | climbed to 12/19, stalled |
+
+**Every one of those wrong rewrites ran fine and would have passed a
+review.** 148 behavioral divergences that only recorded reality caught.
+
+That's the finding I'd actually defend: not "AI writes bad code," but that
+the frontier is *measurable*, sits in a specific place, and moves depending
+on whether a module is self-contained or a wrapper around internal state.
+When the agent can do the job, verification proves it. When it can't, the
+gate stays red and nothing broken ships.
 
 ## What it doesn't claim
 

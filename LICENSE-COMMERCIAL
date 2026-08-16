@@ -1,0 +1,72 @@
+ZeroDiff Commercial License
+Copyright (c) 2026 HoosHub LLC. All rights reserved.
+
+This license governs `zerodiff/enterprise.py` (the "Enterprise Module") and
+only that file. Every other part of ZeroDiff is MIT-licensed; see LICENSE.
+
+The Enterprise Module provides `zerodiff attest`, `zerodiff
+verify-attestation`, `zerodiff history`, and `zerodiff replay --history`.
+
+
+1. EVALUATION AND NON-PRODUCTION USE — NO CHARGE
+
+You may read, run, copy, and modify the Enterprise Module without charge
+for any of the following:
+
+  (a) evaluating whether to purchase a commercial license;
+  (b) development, testing, CI, and internal experimentation;
+  (c) personal, academic, or research use;
+  (d) contributing improvements back to this project.
+
+"Non-production" means the output is not relied upon as evidence in a
+commercial decision, a customer-facing claim, an audit, or a compliance
+process.
+
+
+2. PRODUCTION USE — REQUIRES A COMMERCIAL LICENSE
+
+A commercial license is required to use the Enterprise Module where its
+output is relied upon in the course of business. In particular:
+
+  (a) presenting an attestation to an auditor, customer, regulator, review
+      board, or counterparty as evidence that a verification took place;
+  (b) gating a production release, merge, or deployment on it;
+  (c) offering it, or its output, as part of a product or service to third
+      parties.
+
+Both paid tiers (Team and Enterprise) grant this license. See
+docs/PRICING.md for the tiers and COMMERCIAL.md for how to obtain one.
+
+
+3. WHAT YOU MAY NOT DO WITHOUT A COMMERCIAL LICENSE
+
+  (a) remove or alter this license, the copyright notice, or the module's
+      license header;
+  (b) redistribute the Enterprise Module under different terms, including
+      as part of a fork presented as fully MIT-licensed;
+  (c) offer the Enterprise Module's functionality as a hosted or managed
+      service.
+
+Nothing here restricts your rights to the MIT-licensed remainder of
+ZeroDiff, which you may fork, redistribute, and use commercially without
+restriction — including with the Enterprise Module removed.
+
+
+4. NO WARRANTY
+
+THE ENTERPRISE MODULE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE ENTERPRISE
+MODULE OR ITS USE.
+
+An attestation records that a verification ran and that its inputs have not
+been altered since. It is not a warranty that the verified software is
+correct, fit for any purpose, or free of defects. Equivalence is asserted
+over recorded behaviors only.
+
+
+5. CONTACT
+
+hooshub@gmail.com — put "ZeroDiff license" in the subject.
