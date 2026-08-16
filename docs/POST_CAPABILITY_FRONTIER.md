@@ -1,0 +1,151 @@
+# I let GPT-4o migrate six Python libraries unattended. Here is exactly where it broke.
+
+Everyone has an opinion about whether AI can rewrite production code. Very
+few people have numbers, because "did the rewrite work?" is hard to answer
+— the tests pass, the code reads fine, and the bug shows up in a customer's
+account three weeks later.
+
+So I built a way to answer it mechanically, pointed it at real libraries
+from PyPI, and let a model do the work with no human in the loop. This is
+what came back.
+
+## The method, briefly
+
+For each library: record what the real thing actually does — every call at
+every public function boundary, inputs, return values, exceptions, and
+in-place argument mutations, captured from a driver script exercising it.
+Then hand a model an empty module and the original's source, let it write a
+replacement, and replay every recorded call against the replacement.
+
+A behavior matches or it doesn't. There is no judgment call, no model
+scoring another model, no "looks correct to me." The verdict is
+`matched N of N`, and any divergence comes with the exact input that
+exposes it.
+
+The model gets the divergence report back and tries again, in a loop, until
+everything matches or it stops making progress. Nobody intervenes.
+
+Two things worth stating before the numbers, because they bound what this
+proves:
+
+- **Equivalence is over recorded behaviors only** — the inputs my driver
+  actually exercised, not all possible inputs. Coverage is a property of
+  the driver, and I report it per boundary rather than rounding it up to
+  "correct."
+- **I wrote the drivers.** I did not write the rewrites; the model did, and
+  I could not see them until the loop finished.
+
+## First, the part that surprised me: it often just works
+
+I expected this to be a post about AI failing. It isn't, and the successes
+are the reason I trust the failures.
+
+| target | model | result | agent calls |
+|---|---|---|---|
+| `pytimeparse` (42 behaviors) | gpt-4o-mini | **42 / 42** | 1 |
+| `roman` (10,083 behaviors) | gpt-4o-mini | **10,083 / 10,083** | 2 |
+| a shipping-cost module (37) | gpt-4o-mini | **37 / 37** | 1 |
+
+Ten thousand recorded behaviors of `roman`, reproduced exactly, by the
+*cheap* model, in two passes, unattended. That includes the genuinely
+strange ones — `toRoman(0)` returns `"N"`, the medieval *nulla*, and the
+range error says `0..4999` rather than `1..4999`.
+
+If your intuition is "LLMs can't be trusted to migrate code," that result
+should move it. Mine moved.
+
+## Then it hits a wall, and the wall has a shape
+
+Three targets I picked specifically because I thought they'd be hard. Same
+setup, GPT-4o this time, six iterations maximum:
+
+| target | what makes it brutal | behaviors | best unattended result |
+|---|---|---|---|
+| `chevron` (Mustache engine) | recursive rendering — the recording captures the engine's *own internal recursive calls*, so a rewrite has to reproduce the recursion contract, not just the output | 77 | **23 / 77**, then it *regressed to 0* |
+| `validators` | regex-dense, plus a contract where invalid input returns a **falsy `ValidationError` object** rather than raising | 72 | **oscillated 14 ↔ 23 forever** |
+| `python-dotenv` | quoting and interpolation quirks, file-based fixtures | 19 | **12 / 19**, stalled |
+
+The `chevron` run is the one I keep thinking about. It climbed to 23 of 77,
+then followed its own fix hints *downward* to zero. Not a crash — a
+confident, plausible, steadily-worsening rewrite.
+
+`validators` is the funnier failure. It found two local optima and swung
+between them, 14 → 23 → 14 → 23, indefinitely. My stall detection only
+caught *consecutive identical* failures at the time, so it happily burned
+iterations on a cycle. I now fingerprint recent problem sets and stop on
+cycles, which is a guardrail that exists purely because a model found the
+hole.
+
+**Every one of those wrong rewrites ran fine.** They imported, executed,
+returned plausible values, and would have passed code review. 148
+behavioral divergences across the three, none of which a linter, a type
+checker, or a reasonable human reviewer would have caught.
+
+## The actual finding: difficulty isn't about size
+
+The thing I did not expect is that difficulty barely tracks with how much
+code there is. `roman` is 10,083 behaviors and fell in two passes.
+`python-dotenv` is 19 behaviors and never got there.
+
+What predicts difficulty is **whether the module is self-contained**.
+
+- **Translate:** the logic is right there in the source. `roman`,
+  `pytimeparse`. A cheap model one-shots these.
+- **Restructure:** the module is a thin surface over internal state or
+  classes elsewhere. `semver`'s deprecation wrapper, `chevron`'s recursion.
+  Here gpt-4o-mini stalled at **0 of 277** — it kept importing the
+  original's internal class rather than reimplementing it — while gpt-4o
+  climbed 0 → 159 → 246 → **275 of 277** over eight calls.
+
+That's a useful heuristic if you're deciding what to hand to an agent
+today: look at whether the thing you're replacing can be understood without
+reading the rest of the package.
+
+## The best result in the whole set is a failure
+
+`semver`, gpt-4o, 275 of 277. It never closed the last two.
+
+Both were `bump_prerelease`. The real function silently does *nothing* when
+the prerelease has no digits in it — `bump_prerelease("1.2.3-alpha")`
+returns `1.2.3-alpha`, unchanged — and it bumps the *rightmost embedded*
+number, so `alpha.7.x` becomes `alpha.8.x`. No docstring mentions either.
+
+The model would not accept it. It kept "fixing" the no-op, because a
+version bump that doesn't bump is obviously a bug.
+
+Here's the part I like: **a careful hand-written rewrite of `semver`, done
+before the model ever saw it, made the identical mistake.** Same function,
+same assumption, same two behaviors. Human and model failed in exactly the
+same place, for exactly the same reason — both believed the code did what
+it was supposed to do rather than what it does.
+
+Neither of us would have caught it by reading. The recording caught both.
+
+## What I take from this
+
+Generation is largely solved and verification isn't. The interesting
+question stopped being "can a model write the code" — often, yes,
+astonishingly well — and became "how would you know." For a legacy module
+whose behavior nobody remembers and whose tests encode what someone once
+*believed*, the only ground truth left is what the code actually does when
+you run it.
+
+That's recordable. It turns out to be recordable cheaply.
+
+And the frontier is measurable rather than a matter of vibes: self-contained
+logic migrates today, at low cost, with a small model. Anything that is a
+wrapper around state elsewhere does not, yet — and when it fails, it fails
+*plausibly*, which is the dangerous part.
+
+## The tool
+
+The harness is called ZeroDiff — `pip install zerodiff`, MIT, zero runtime
+dependencies. It records, replays, and reports; it contains no model, and
+the verdict is deterministic. Whether an agent writes the rewrite or you do
+is beside the point to it.
+
+Everything above is reproducible from `examples/` in the repo. If you try
+it on something and it's wrong, I'd genuinely like to know — a verification
+tool that overstates its guarantees is worse than none.
+
+https://github.com/Hoos92/zerodiff
