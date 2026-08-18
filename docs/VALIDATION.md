@@ -247,11 +247,13 @@ guardrail.
 Re-run 2026-08-18 against the current OpenAI frontier line, on the same
 recorded traces, fully unattended (`zerodiff migrate --llm openai:gpt-5.6-luna`).
 
-| target | behaviors | gpt-4o (2026-07) | gpt-5.6-luna | gpt-5.6-terra |
-|---|---|---|---|---|
-| `pytimeparse` | 42 | 42/42, 1 call | **42/42, 1 call** | — |
-| `roman` | 10,083 | 10,083/10,083, 2 calls (mini) | **10,083/10,083, 1 call** | — |
-| `semver` | 277 | **275/277**, never closed the last two in 8 calls | **277/277, 2 calls** | **277/277, 1 call** |
+| target | behaviors | gpt-4o (2026-07) | luna | terra | sol |
+|---|---|---|---|---|---|
+| `pytimeparse` | 42 | 42/42, 1 call | **42/42, 1 call** | — | — |
+| `roman` | 10,083 | 10,083/10,083, 2 calls (mini) | **10,083/10,083, 1 call** | — | — |
+| `semver` | 277 | **275/277**, never closed the last two in 8 calls | **277/277, 2 calls** | **277/277, 1 call** | **277/277, 1 call** |
+
+Every 5.6 variant clears the bar gpt-4o could not.
 
 The `semver` result is a real frontier move. The two behaviors gpt-4o could
 not reproduce -- `bump_prerelease("1.2.3-alpha")` being a silent no-op, and
@@ -304,9 +306,9 @@ about coverage rather than correctness, and the remedy is more traffic --
 which is cheap, and which works.
 
 
-## Two models, the same score, different correctness
+## Three models, the same score, different correctness
 
-Luna and Terra both produced a `semver` rewrite that matched **277 of 277**
+All three 5.6 variants produced a `semver` rewrite matching **277 of 277**
 recorded behaviors. The reports are indistinguishable. The code is not.
 
 Fuzzing both rewrites against upstream over 305 generated prerelease inputs
@@ -316,6 +318,10 @@ Fuzzing both rewrites against upstream over 305 generated prerelease inputs
 |---|---|---|
 | gpt-5.6-luna | 277/277 | **171** |
 | gpt-5.6-terra | 277/277 | **0** |
+| gpt-5.6-sol | 277/277 | **0** |
+
+Luna is the outlier; its two siblings generalize cleanly from the same
+traces and the same prompts.
 
 Luna's `bump_prerelease` increments the *first* numeric field; upstream
 increments the *rightmost*. Over the recorded traffic those two rules are

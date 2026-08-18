@@ -164,23 +164,29 @@ a class of bug closes.
 
 ## The result I did not expect
 
-I ran the same `semver` job through a second frontier model, `gpt-5.6-terra`.
-It also scored **277 of 277** — in one call rather than two.
+I ran the same `semver` job through the other two frontier variants,
+`gpt-5.6-terra` and `gpt-5.6-sol`. Both also scored **277 of 277**, each in a
+single call.
 
-Two rewrites. Identical reports. So I fuzzed both against upstream across 305
-generated prerelease inputs, none of which were among the 277 recorded:
+Three rewrites. Three identical reports. So I fuzzed all three against
+upstream across 305 generated prerelease inputs, none of which were among the
+277 recorded:
 
 | model | recorded score | wrong on 305 unrecorded inputs |
 |---|---|---|
 | `gpt-5.6-luna` | 277 / 277 | **171** |
 | `gpt-5.6-terra` | 277 / 277 | **0** |
+| `gpt-5.6-sol` | 277 / 277 | **0** |
 
-One of these rewrites is wrong on **56% of a wider input space**. The other is
-flawless. **The verification could not tell them apart**, because over the
+One of these rewrites is wrong on **56% of a wider input space**. The other two
+are flawless. **The verification could not tell them apart**, because over the
 recorded traffic the two implementations are genuinely indistinguishable — no
 recorded prerelease had more than one number in it, so "increment the first"
 and "increment the rightmost" produce identical output on every single
 recorded case.
+
+Same traces, same prompts, same harness — and one of three siblings quietly
+generalizes wrong.
 
 I want to be careful about what this does and doesn't show. It is one function
 in one library, and it is not a ranking of models. What it shows is sharper
