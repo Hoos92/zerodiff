@@ -32,3 +32,9 @@ nodrift-junit.xml
 nodrift-fix-prompt.md
 .nodrift/
 **/.nodrift/
+
+# environment files: these hold live API keys and must never be
+# committed. The repo is public.
+.env
+.env.*
+!.env.example

@@ -214,3 +214,63 @@ def test_builtin_agent_full_loop_with_quality_gate(stub, ws):
     # the second prompt carried the quality finding to the agent
     second_prompt = script.requests[1]["body"]["messages"][1]["content"]
     assert "eval-exec" in second_prompt
+
+
+class TestWireFormatAdaptation:
+    """Newer OpenAI models renamed max_tokens and refuse a non-default
+    temperature. The agent discovers this from the 400 rather than carrying
+    a model list that would go stale -- which also covers third-party
+    openai-compatible endpoints with their own quirks.
+    """
+
+    RENAME = ('{"error":{"message":"Unsupported parameter: \'max_tokens\' is '
+              'not supported with this model. Use \'max_completion_tokens\' '
+              'instead."}}')
+    TEMP = ('{"error":{"message":"Unsupported value: \'temperature\' does not '
+            'support 0 with this model"}}')
+
+    def _agent(self):
+        return BuiltinAgent("openai-compatible:m", base_url="http://x/v1")
+
+    def test_starts_with_the_widely_supported_spelling(self):
+        agent = self._agent()
+        assert agent._token_param == "max_tokens"
+        assert agent._send_temperature is True
+
+    def test_adapts_to_the_parameter_rename(self):
+        agent = self._agent()
+        assert agent._adapt_to_rejection(self.RENAME) is True
+        assert agent._token_param == "max_completion_tokens"
+
+    def test_adapts_to_temperature_rejection(self):
+        agent = self._agent()
+        assert agent._adapt_to_rejection(self.TEMP) is True
+        assert agent._send_temperature is False
+
+    def test_second_identical_rejection_does_not_adapt_again(self):
+        """Guards against an infinite retry loop: once adapted, the same
+        complaint must report 'nothing changed' so _request gives up."""
+        agent = self._agent()
+        assert agent._adapt_to_rejection(self.RENAME) is True
+        assert agent._adapt_to_rejection(self.RENAME) is False
+
+    def test_unrelated_400_does_not_adapt(self):
+        agent = self._agent()
+        assert agent._adapt_to_rejection('{"error":{"message":"bad model"}}') \
+            is False
+
+    def test_adapted_body_uses_the_new_shape(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
+        agent = self._agent()
+        agent._adapt_to_rejection(self.RENAME)
+        agent._adapt_to_rejection(self.TEMP)
+        _, _, body = agent._build_request("sys", "usr")
+        assert body["max_completion_tokens"] == agent.max_tokens
+        assert "max_tokens" not in body
+        assert "temperature" not in body
+
+    def test_default_body_is_unchanged_for_older_models(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
+        _, _, body = self._agent()._build_request("sys", "usr")
+        assert body["max_tokens"] > 0
+        assert body["temperature"] == 0

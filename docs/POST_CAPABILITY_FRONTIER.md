@@ -1,4 +1,4 @@
-# I let GPT-4o migrate six Python libraries unattended. Here is exactly where it broke.
+# I let LLMs migrate six Python libraries unattended. Here is exactly where they broke — and what "passing" actually means.
 
 Everyone has an opinion about whether AI can rewrite production code. Very
 few people have numbers, because "did the rewrite work?" is hard to answer
@@ -120,6 +120,47 @@ same place, for exactly the same reason — both believed the code did what
 it was supposed to do rather than what it does.
 
 Neither of us would have caught it by reading. The recording caught both.
+
+## Update: I re-ran this against the current frontier
+
+The runs above used gpt-4o, which is now two generations old. So I re-ran
+them unattended against `gpt-5.6-luna` on the same recorded traces.
+
+`pytimeparse`: 42/42, one call, same as before. `semver`: **277 of 277 in two
+calls** — including both `bump_prerelease` quirks that gpt-4o never closed in
+eight, and that I got wrong by hand. The frontier moved, and it moved exactly
+where you'd expect: the "restructure" cases got easier.
+
+Then I checked the rewrite against inputs the recording didn't cover, and it
+was wrong.
+
+Upstream's `bump_prerelease` increments the **rightmost** number in the
+prerelease. Luna's incremented the **first**. On `1.2.3-0.3.7` upstream gives
+`1.2.3-0.3.8`; the rewrite gave `1.2.3-1.3.7`. It passed 277 of 277 because
+only six inputs ever reached that function and not one had two numbers in the
+prerelease — over that traffic, the two rules are indistinguishable.
+
+The verdict wasn't wrong. The coverage was thin, and the report said so all
+along: *matched 277 of 277 recorded behaviors*, not *correct*.
+
+So I added one input to the driver — `"1.2.3-0.3.7"` — re-recorded, and ran
+the identical pipeline again:
+
+```
+iteration 1:   0 of 278 matched
+iteration 2: 265 of 278 matched
+iteration 3: 278 of 278 matched
+```
+
+The new implementation walks the parts in reverse and takes the rightmost
+numeric field. And the fix **generalized** — `1.2.3-a.1.b.2.c.3` and
+`1.2.3-9.9`, never recorded at any point, now match upstream too. It learned
+the rule rather than the example.
+
+That sequence is the honest shape of this whole idea. A passing report is a
+claim about coverage, not about correctness. The remedy is more recorded
+traffic. And the remedy is cheap — one line in a driver, thirty seconds, and
+a class of bug closes.
 
 ## What I take from this
 

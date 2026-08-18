@@ -240,6 +240,69 @@ loop now remembers recent problem fingerprints and stops on *cycles*,
 not just repeats. Every failure mode a model exhibits becomes a
 guardrail.
 
+---
+
+# Frontier cohort: gpt-5.6, and what "277 of 277" actually means
+
+Re-run 2026-08-18 against the current OpenAI frontier line, on the same
+recorded traces, fully unattended (`zerodiff migrate --llm openai:gpt-5.6-luna`).
+
+| target | behaviors | gpt-4o (2026-07) | gpt-5.6-luna (2026-08) |
+|---|---|---|---|
+| `pytimeparse` | 42 | 42/42, 1 call | **42/42, 1 call** |
+| `semver` | 277 | **275/277** — never closed the last two, 8 calls | **277/277, 2 calls** |
+
+The `semver` result is a real frontier move. The two behaviors gpt-4o could
+not reproduce -- `bump_prerelease("1.2.3-alpha")` being a silent no-op, and
+`alpha.7.x` bumping the *embedded* number -- are the same two that fooled the
+human clean-room rewrite. Luna got both, in two agent calls.
+
+## Then the interesting part
+
+A green 277/277 is not a claim of correctness, and this run demonstrates why
+better than any disclaimer could.
+
+Luna's `bump_prerelease` incremented the **first** number in the prerelease.
+Upstream increments the **rightmost**. On `1.2.3-0.3.7` upstream returns
+`1.2.3-0.3.8`; Luna returned `1.2.3-1.3.7`. A genuine behavioral difference,
+shipped under a clean report.
+
+It passed because **the recording never covered it**. Only six inputs reached
+`bump_prerelease`, and not one had two numbers in the prerelease, so
+"increment the first" and "increment the rightmost" are indistinguishable
+over that traffic. The verdict was accurate; the coverage was thin.
+
+## Closing the loop
+
+Adding a single input to the driver -- `"1.2.3-0.3.7"` -- and re-recording
+took it from 277 to 278 behaviors. Same model, same pipeline, re-run:
+
+```
+iteration 1:   0 of 278 matched
+iteration 2: 265 of 278 matched
+iteration 3: 278 of 278 matched
+```
+
+The new implementation walks the prerelease parts in reverse
+(`range(len(parts) - 1, -1, -1)`) and takes the rightmost numeric field.
+
+Crucially **the fix generalized**. Inputs that were never recorded at all now
+also match upstream:
+
+| input | upstream | rewrite |
+|---|---|---|
+| `1.2.3-0.3.7` | `1.2.3-0.3.8` | `1.2.3-0.3.8` |
+| `1.2.3-a.1.b.2.c.3` | `1.2.3-a.1.b.2.c.4` | `1.2.3-a.1.b.2.c.4` |
+| `1.2.3-9.9` | `1.2.3-9.10` | `1.2.3-9.10` |
+
+It learned the rule, not the example.
+
+**The lesson is the product's whole thesis, stated by the product itself:**
+equivalence is bounded by the traffic you record, a passing report is a claim
+about coverage rather than correctness, and the remedy is more traffic --
+which is cheap, and which works.
+
+
 ## Program totals (all cohorts + dateutil case study)
 
 **11 real libraries verified to 100% by hint-guided rewrites (12,952

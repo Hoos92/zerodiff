@@ -83,6 +83,10 @@ class BuiltinAgent:
         self.max_tokens = max_tokens
         self.timeout = timeout
         self.api_key_env = api_key_env
+        # wire-format details that differ across OpenAI model generations;
+        # start with the widely-supported spelling and adapt on rejection
+        self._token_param = "max_tokens"
+        self._send_temperature = True
 
     # -- key handling --------------------------------------------------------
     def _api_key(self):
@@ -117,11 +121,34 @@ class BuiltinAgent:
             url = self.base_url + "/chat/completions"
             headers = {"Authorization": "Bearer " + self._api_key(),
                        "content-type": "application/json"}
-            body = {"model": self.model, "max_tokens": self.max_tokens,
-                    "temperature": 0,
+            # newer OpenAI models renamed max_tokens and refuse a non-default
+            # temperature; both are discovered at runtime rather than kept as
+            # a model list that would go stale (see _adapt_to_rejection)
+            body = {"model": self.model,
+                    self._token_param: self.max_tokens,
                     "messages": [{"role": "system", "content": system},
                                  {"role": "user", "content": user}]}
+            if self._send_temperature:
+                body["temperature"] = 0
         return url, headers, body
+
+    def _adapt_to_rejection(self, detail):
+        """A 400 naming an unsupported parameter is recoverable: adjust and
+        retry once. Returns True if something was actually changed.
+
+        Done by reading the error rather than by matching model names, so it
+        works with models that don't exist yet and with third-party
+        openai-compatible endpoints that differ in their own ways.
+        """
+        changed = False
+        if "max_tokens" in detail and self._token_param == "max_tokens" and \
+                "max_completion_tokens" in detail:
+            self._token_param = "max_completion_tokens"
+            changed = True
+        if "temperature" in detail and self._send_temperature:
+            self._send_temperature = False
+            changed = True
+        return changed
 
     def _parse_response(self, data):
         # `openai-compatible` points at third-party servers whose replies do
@@ -149,10 +176,12 @@ class BuiltinAgent:
         return text
 
     def _request(self, system, user):
-        url, headers, body = self._build_request(system, user)
-        payload = json.dumps(body).encode("utf-8")
         last_error = None
-        for attempt in (1, 2):
+        for attempt in (1, 2, 3):
+            # rebuilt each attempt: _adapt_to_rejection may have changed the
+            # wire format between tries
+            url, headers, body = self._build_request(system, user)
+            payload = json.dumps(body).encode("utf-8")
             request = urllib.request.Request(url, data=payload,
                                              headers=headers)
             try:
@@ -178,12 +207,17 @@ class BuiltinAgent:
                         "the model name %r. %s" % (self.model, detail))
                 last_error = AgentError("LLM API error HTTP %d: %s"
                                         % (exc.code, detail))
+                # a 400 naming a parameter this model doesn't accept is
+                # recoverable -- adjust the wire format and go again with
+                # no backoff, since nothing is rate-limiting us
+                if exc.code == 400 and self._adapt_to_rejection(detail):
+                    continue
                 if exc.code not in (429, 500, 502, 503, 529):
                     raise last_error
             except (urllib.error.URLError, OSError) as exc:
                 last_error = AgentError(
                     "cannot reach LLM endpoint %s: %s" % (url, exc))
-            if attempt == 1:
+            if attempt < 3:
                 time.sleep(2)
         raise last_error
 
