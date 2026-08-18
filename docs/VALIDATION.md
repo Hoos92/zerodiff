@@ -349,6 +349,45 @@ and that if you care about behavior outside your recording, you have to
 record it.
 
 
+## Turning the lens on our own rewrites
+
+The `semver` result raises an obvious question about everything else in this
+document: these rewrites all reached 100% of recorded behaviors, but are any
+of them *actually* equivalent?
+
+Differential fuzz of every committed rewrite against its upstream, over
+~3,300 generated inputs across 16 functions, none drawn from the recordings:
+
+| library | functions fuzzed | inputs | differing |
+|---|---|---|---|
+| `roman` | toRoman, fromRoman | 781 | **1** |
+| `inflection` | 8 rule-table functions | 2,200 | **0** |
+| `humanize` | intcomma, intword, apnumber, ordinal | 1,084 | **3** |
+| `pytimeparse` | timeparse | 264 | **0** |
+| `word2number` | word_to_num | 210 | **0** |
+
+**Four divergences in ~3,300 inputs**, and both clusters are instructive.
+
+**`fromRoman("N")` — the gap this document already predicted.** Upstream
+returns `0`; the rewrite raises. The scope note above states plainly that
+`fromRoman("N")` was never recorded because the driver round-trips 1..4999,
+"so nothing is claimed about it." The fuzz rediscovered exactly that,
+independently. The caveat was accurate and specific rather than decorative.
+
+**`ordinal("abc")`, `ordinal("")`, `ordinal(None)` — a known bug class that
+did not generalize.** Upstream passes non-numeric input straight through
+(`"abc"` → `"abc"`, `None` → `"None"`); the rewrite raises `ValueError`.
+That is precisely the `intcomma` finding documented in the second cohort --
+and `intcomma` is correct in the rewrite, because the recording covered it.
+The sibling function was never exercised with non-numeric input, so the
+same fix never reached it.
+
+The pattern is consistent across every result here: **the rewrites are
+correct exactly as far as the recording reached, and no further.** That is
+the claim the harness makes, it is the claim the reports print, and when
+tested adversarially it holds.
+
+
 ## Program totals (all cohorts + dateutil case study)
 
 **11 real libraries verified to 100% by hint-guided rewrites (12,952
