@@ -162,6 +162,39 @@ claim about coverage, not about correctness. The remedy is more recorded
 traffic. And the remedy is cheap — one line in a driver, thirty seconds, and
 a class of bug closes.
 
+## The result I did not expect
+
+I ran the same `semver` job through a second frontier model, `gpt-5.6-terra`.
+It also scored **277 of 277** — in one call rather than two.
+
+Two rewrites. Identical reports. So I fuzzed both against upstream across 305
+generated prerelease inputs, none of which were among the 277 recorded:
+
+| model | recorded score | wrong on 305 unrecorded inputs |
+|---|---|---|
+| `gpt-5.6-luna` | 277 / 277 | **171** |
+| `gpt-5.6-terra` | 277 / 277 | **0** |
+
+One of these rewrites is wrong on **56% of a wider input space**. The other is
+flawless. **The verification could not tell them apart**, because over the
+recorded traffic the two implementations are genuinely indistinguishable — no
+recorded prerelease had more than one number in it, so "increment the first"
+and "increment the rightmost" produce identical output on every single
+recorded case.
+
+I want to be careful about what this does and doesn't show. It is one function
+in one library, and it is not a ranking of models. What it shows is sharper
+than that:
+
+**A passing report ranks nothing.** It says the rewrite reproduces the
+behavior you recorded. If you care about behavior you didn't record — and you
+do — then the recording is the thing to improve, not the score.
+
+Which is the entire argument for recording real traffic rather than writing
+test cases from memory. The green check was never the point. The coverage
+behind it is.
+
+
 ## What I take from this
 
 Generation is largely solved and verification isn't. The interesting

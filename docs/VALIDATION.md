@@ -247,10 +247,11 @@ guardrail.
 Re-run 2026-08-18 against the current OpenAI frontier line, on the same
 recorded traces, fully unattended (`zerodiff migrate --llm openai:gpt-5.6-luna`).
 
-| target | behaviors | gpt-4o (2026-07) | gpt-5.6-luna (2026-08) |
-|---|---|---|---|
-| `pytimeparse` | 42 | 42/42, 1 call | **42/42, 1 call** |
-| `semver` | 277 | **275/277** — never closed the last two, 8 calls | **277/277, 2 calls** |
+| target | behaviors | gpt-4o (2026-07) | gpt-5.6-luna | gpt-5.6-terra |
+|---|---|---|---|---|
+| `pytimeparse` | 42 | 42/42, 1 call | **42/42, 1 call** | — |
+| `roman` | 10,083 | 10,083/10,083, 2 calls (mini) | **10,083/10,083, 1 call** | — |
+| `semver` | 277 | **275/277**, never closed the last two in 8 calls | **277/277, 2 calls** | **277/277, 1 call** |
 
 The `semver` result is a real frontier move. The two behaviors gpt-4o could
 not reproduce -- `bump_prerelease("1.2.3-alpha")` being a silent no-op, and
@@ -301,6 +302,45 @@ It learned the rule, not the example.
 equivalence is bounded by the traffic you record, a passing report is a claim
 about coverage rather than correctness, and the remedy is more traffic --
 which is cheap, and which works.
+
+
+## Two models, the same score, different correctness
+
+Luna and Terra both produced a `semver` rewrite that matched **277 of 277**
+recorded behaviors. The reports are indistinguishable. The code is not.
+
+Fuzzing both rewrites against upstream over 305 generated prerelease inputs
+-- **none of which were among the 277 recorded** -- gives:
+
+| model | recorded score | mismatches on 305 unrecorded inputs |
+|---|---|---|
+| gpt-5.6-luna | 277/277 | **171** |
+| gpt-5.6-terra | 277/277 | **0** |
+
+Luna's `bump_prerelease` increments the *first* numeric field; upstream
+increments the *rightmost*. Over the recorded traffic those two rules are
+indistinguishable, because no recorded prerelease had more than one number
+in it. Over a wider input space they disagree on 56% of cases.
+
+This is the clearest statement of the method's limit that the program has
+produced, and it cuts both ways:
+
+- **The verdict was honest.** Both reports claimed exactly what they had
+  evidence for -- "matched 277 of 277 *recorded* behaviors" -- and neither
+  claimed correctness. The framing held up.
+- **The verdict was not sufficient.** Two artifacts of very different
+  quality earned the same green. Coverage, not the harness, was the
+  binding constraint.
+
+Adding a single input to the driver (`"1.2.3-0.3.7"`) and re-recording took
+Luna to a correct implementation that then generalized to inputs never
+recorded at all. The remedy for thin coverage is more traffic, and it is
+cheap.
+
+Scope note: this is one function in one library. It says nothing general
+about either model's ability -- only that *a passing report ranks nothing*,
+and that if you care about behavior outside your recording, you have to
+record it.
 
 
 ## Program totals (all cohorts + dateutil case study)
